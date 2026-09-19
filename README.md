@@ -5,7 +5,7 @@ Research materials for the P1 verifier self-calibration / identifiability projec
 ## Layout
 
 - `P1/manuscript/`: merged LaTeX manuscript.
-- `P1/figures/`: source and generated Figure 1 assets.
+- `P1/figures/`: source for Figure 1; `make paper` regenerates the PDF/PNG assets.
 - `P1/proofs/`: deterministic theorem witnesses, certificates, and constructive inverses.
 - `P1/notes/`: historical formal memos and merge notes.
 - `P1/run_all.py`: one-command deterministic verification.
