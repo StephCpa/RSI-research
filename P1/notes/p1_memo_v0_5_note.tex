@@ -1,0 +1,105 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs,enumitem,array}
+\usepackage[hidelinks]{hyperref}
+\usepackage[expansion=false]{microtype}
+\setlist{nosep,leftmargin=1.5em}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+\newcommand{\status}[1]{\hfill{\normalfont\small\textsc{[#1]}}}
+\newcommand{\N}{\mathcal{N}}
+
+\title{\textbf{v0.5 note}\\[2pt]
+\large Independent check of the $n=4$ local theorem and the $(3,1,1)$ construction,\\
+with the remaining open case sharpened}
+\author{18 September 2026}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-2.5em}
+
+Both results verify. The minors reproduce, the closed-form inverse recovers the block parameters to $9\times10^{-15}$ over 2000 random interior points, and the structural-zero mechanism is the right explanation --- better than my overdetermination story, which gives no injectivity. Three additions below: the exceptional set of the inverse is exactly the practically common case; the restricted-tensor route extends to one more $n=4$ partition; and the genuinely open case is $T\le2$, not $T<n$.
+
+%======================================================================
+\section*{1. The $n=4$ minors reproduce}
+
+Recomputed independently with exact rational arithmetic at your witness ($w=(\frac15,\frac14,\frac16)$, $q_1=(\frac34,\frac45,\frac23,\frac56)$, $q_2=(\frac14,\frac15,\frac3{10},\frac29)$, $\eta$ the first $T$ of $(\frac1{10},\frac18,\frac1{12},\frac19)$), taking the first $d$ pivot rows:
+
+\begin{center}\small
+\begin{tabular}{@{}lrrl@{}}
+\toprule
+partition & $d$ & rank & nonzero $d\times d$ minor\\
+\midrule
+$(1,1,1,1)$ & 15 & 15 & $-16611683826260677/15992037016835457024\cdot10^{15}$\\
+$(2,1,1)$ & 14 & 14 & $222933686699647/8916100448256\cdot10^{17}$\\
+$(2,2)$ & 13 & 13 & $102887201886931/17915904\cdot10^{22}$\\
+$(3,1)$ & 13 & 13 & $-20812752499/663552\cdot10^{21}$\\
+$(4)$ & 12 & 12 & $-287159257/26244\cdot10^{21}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The magnitudes match yours exactly; two signs differ, which is only the row-ordering convention of the elimination. So the theorem stands: for every partition of $n=4$ the block-corrupted model is generically locally identifiable, and the random-point rank scans become an appendix sanity check.
+
+%======================================================================
+\section*{2. The closed-form inverse verifies, and its exceptional set is the common case}
+
+Your algebra checks symbolically: with $A=w\prod(1-q_i)$, $o_i=q_i/(1-q_i)$, $r=1-2\eta$, the pattern with coordinate $k$ negative gives $s_k=A(o_io_j+o_k)$ and $d_k=Ar(o_io_j-o_k)$, whence $s_k^2-d_k^2/r^2=4A^2o_1o_2o_3$ for every $k$, and the rest follows. Numerically the recovery of $(w,q_1,q_2,q_3,\eta)$ is exact to $9.2\times10^{-15}$ over 2000 random interior draws.
+
+\begin{remark}[the exceptional set is where you will actually be]
+$r^2=(d_k^2-d_\ell^2)/(s_k^2-s_\ell^2)$ needs $s_k^2\neq s_\ell^2$. Since $s_k=A(o_io_j+o_k)$, all three coincide exactly when $q_1=q_2=q_3$ within the block, i.e.\ when the verifiers sharing a check are \emph{exchangeable}. That is not an exotic configuration: it is what you get from temperature replicas of one verifier, or from an ensemble of identically-trained judges --- the very architecture that motivates blocks.
+
+The good news is that this is an exceptional set of the \emph{construction}, not of the theorem. At exactly equal accuracies inside the size-3 block, the Jacobian of the full $(3,1,1)$ model keeps full rank 16; only the conditioning degrades, from $\sigma_{\min}/\sigma_{\max}\approx1.9\times10^{-2}$ at generic $q$ to $3.5\times10^{-3}$ with $q_1=q_2=q_3$. So identification survives and the closed form does not. The write-up should say this explicitly, and near-exchangeable blocks will need an estimator that does not divide by $s_k^2-s_\ell^2$ --- otherwise the theorem is technically fine and practically useless exactly where verifiers are copies.
+\end{remark}
+
+%======================================================================
+\section*{3. Structural zeros: the mechanism, and how far it reaches}
+
+Your correction is right and mine was not an explanation. If $m_\tau\ge2$, the atom components put zero mass on every within-block mixed-sign pattern, because the whole block flips together. Those cells are atom-free, so the DS components can be read off a stratum where the atoms are absent. In the singleton model no such stratum exists: both atom components have full support, and they can alias against the DS components.
+
+That mechanism reaches further than $(3,1,1)$. Let $\N_\tau$ be the non-unanimous patterns of block $\tau$; restricting a block to $\N_\tau$ kills both atoms. If \emph{three} conditionally independent groups survive the restriction, Kruskal applies to a rank-2 tensor with factor $k$-ranks $2,2,2=2r+2$, giving a unique CP decomposition of the DS part. Hence:
+
+\begin{center}\small
+\begin{tabular}{@{}llll@{}}
+\toprule
+$n$ & partition & $T$ & restricted-tensor route\\
+\midrule
+5 & $(3,1,1)$ & 3 & $6\times2\times2$ rank-2 \quad(your construction)\\
+4 & $(2,1,1)$ & 3 & $2\times2\times2$ rank-2 \quad(same route)\\
+4 & $(2,2)$, $(3,1)$ & 2 & no third factor --- matrix decomposition is rotation-ambiguous\\
+4 & $(4)$ & 1 & no tensor structure at all\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+So the open $n=4$ question splits in two, and only the second half is hard:
+\[
+\boxed{\;T=3:\ \text{restricted-tensor route applies}\qquad
+T\le2:\ \text{genuinely open}\;}
+\]
+For $(2,1,1)$ the DS components come out of the restricted $2\times2\times2$ tensor exactly as in your step~3; what remains is the within-block inversion for $m=2$, where the two non-unanimous patterns give $A[(1-\eta)o_1+\eta o_2]$ and $A[(1-\eta)o_2+\eta o_1]$ --- two equations for three unknowns, so the size-2 analogue of your closed form must borrow one more equation from the atom-subtraction stage rather than from $\N_\tau$ alone. That is a small, concrete gap.
+
+For $T\le2$ there is no third conditionally independent variable at all, so no classical latent-class machinery applies, yet the model is heavily overdetermined (13 or 12 parameters against 15 cells) and the scans found no ambiguity. That combination --- fewer than three observed variables, tied and zero-constrained components, no second root in practice --- is the interesting case, and it is where I would expect a genuinely new argument rather than a citation.
+
+%======================================================================
+\section*{4. Backlog, revised}
+
+\begin{enumerate}
+\item[(i)] \emph{Solved.} All $n=4$ partitions, generic local identifiability, exact minors.
+\item[(iii)] \emph{Constructive proof in hand} for $(3,1,1)$, modulo naming the exceptional sets: $s_k^2=s_\ell^2$ (exchangeable block), coincident CP components, rank-deficient singleton factors ($p_{+,\tau}=p_{-,\tau}$), $\eta_\tau=1/2$. Add $(2,1,1)$ as the same route with the size-2 inversion gap noted above.
+\item[(ii)] \emph{The remaining risk}, now sharpened: global identifiability at $n=4$ with $T\le2$, to be attacked from structural zeros rather than dimension counting.
+\end{enumerate}
+
+%======================================================================
+\section*{5. Reproducibility fixes}
+
+Both issues are fixed. \texttt{blocks.py} no longer runs a scan on import (it exposes \texttt{make}, \texttt{rank\_check}, \texttt{global\_scan} and a small demo under \texttt{\_\_main\_\_}), and the default budgets are gone: \texttt{run\_n4.py} and \texttt{run\_n5.py} pass their budgets explicitly and print them on every line, so the tables in v0.4 are reproducible from the output itself. \texttt{cond\_blocks.py} and \texttt{exch\_check.py} now import from \texttt{blocks} via a \texttt{\_\_file\_\_}-based path insertion instead of \texttt{open('blocks.py')}.
+
+\paragraph{New scripts.} \texttt{exact\_blocks.py} (exact minors for every $n=4$ partition), \texttt{invert3.py} (closed-form inverse check plus the exchangeable degeneracy), \texttt{exch\_check.py} (rank and conditioning at equal within-block accuracies).
+\end{document}
