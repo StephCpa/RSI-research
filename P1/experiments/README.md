@@ -113,3 +113,48 @@ make degeneracy
 conditioning plots. `finite_sample_prereg_v0_1.md` freezes the restart grid,
 the free `beta_N` scaling regression, the coverage design, and the controlled
 paths toward the algebraic degeneracy sets.
+
+
+## 8. Current frozen protocols
+
+Before the real audit pilot, use:
+
+- `audit_prereg_v0_3.md`
+- `audit_analysis_spec_v0_1.md`
+
+These supersede the earlier pre-freeze audit versions.
+
+The v0.3 design splits base tests into screen-A and verifier-view-B, uses AST
+deduplication, includes a 5% judge-repeatability sample, preregisters MBPP+ as a
+robustness benchmark, and adds an independent-error excess-unanimity analysis.
+
+## 9. Excess unanimity and allocation analyses
+
+After the gold-blind view table is frozen, the independent-error null can be
+checked without gold:
+
+```bash
+python P1/experiments/ds_excess.py path/to/views_only.csv
+```
+
+After gold is available:
+
+```bash
+python P1/experiments/audit_analysis.py path/to/audit_table.csv
+python P1/experiments/audit_allocation.py path/to/audit_table.csv
+```
+
+The allocation study targets the total false-accept mass of the preregistered
+deployed gate rather than the unanimous-stratum rate alone.
+
+## 10. Local collector requirements
+
+The local collector should use:
+
+- `base_test_split.py` for deterministic A/B splitting;
+- `ast_hash.py` for within-problem AST deduplication;
+- `judge_repeatability.py select` before repeat calls and
+  `judge_repeatability.py analyze` after them.
+
+The primary CSV schemas are in `audit_views_schema_example.csv` (gold blind)
+and `audit_schema_example.csv` (after gold).
