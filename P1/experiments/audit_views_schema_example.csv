@@ -1,0 +1,4 @@
+problem_id,candidate_id,view_visible_tests,view_judgeA_identity,view_judgeA_order_swap,view_judgeA_negation,view_judgeB_identity,view_judgeB_order_swap,view_judgeB_negation
+HumanEval_0,example_0001,1,1,1,1,1,1,1
+HumanEval_0,example_0002,1,1,1,1,1,1,1
+HumanEval_1,example_0003,-1,1,-1,1,-1,-1,-1
