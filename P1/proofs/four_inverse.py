@@ -90,22 +90,26 @@ def recover(P, rows_idx):
     S=np.linalg.solve(np.array([[1-eta,eta],[eta,1-eta]]), np.array([Qp,Qm]))
     return dict(eta=eta,a=a,b=b,c=c,q=q,S=S)
 
-rng=np.random.default_rng(17); errs=[]; fails=0; used=[]
-for _ in range(200):
-    c=rng.dirichlet([3,3])*rng.uniform(0.4,0.7)
-    q=[rng.uniform(0.6,0.95,4), rng.uniform(0.05,0.4,4)]
-    eta=rng.uniform(0.05,0.3); Sp=rng.uniform(0.1,0.3); Sm=1-c.sum()-Sp
-    if Sm<=0.05: continue
-    P=law4(c,q,eta,[Sp,Sm])
-    out=None
-    for rows_idx in [(0,1),(0,2),(0,3)]:
-        out=recover(P,rows_idx)
-        if isinstance(out,dict): used.append(rows_idx); break
-    if not isinstance(out,dict): fails+=1; continue
-    e=max(abs(out['eta']-eta), abs(out['c'][0]-c[0]), abs(out['c'][1]-c[1]),
-          np.max(np.abs(out['q'][0]-q[0])), np.max(np.abs(out['q'][1]-q[1])),
-          abs(out['S'][0]-Sp), abs(out['S'][1]-Sm))
-    errs.append(e)
-errs=np.array(errs)
-print(f"(4) constructive inverse: {len(errs)} instances recovered, {fails} failures")
-print("   error: median %.2e  90th %.2e  max %.2e" % (np.median(errs), np.percentile(errs,90), errs.max()))
+def main():
+    rng=np.random.default_rng(17); errs=[]; fails=0; used=[]
+    for _ in range(200):
+        c=rng.dirichlet([3,3])*rng.uniform(0.4,0.7)
+        q=[rng.uniform(0.6,0.95,4), rng.uniform(0.05,0.4,4)]
+        eta=rng.uniform(0.05,0.3); Sp=rng.uniform(0.1,0.3); Sm=1-c.sum()-Sp
+        if Sm<=0.05: continue
+        P=law4(c,q,eta,[Sp,Sm])
+        out=None
+        for rows_idx in [(0,1),(0,2),(0,3)]:
+            out=recover(P,rows_idx)
+            if isinstance(out,dict): used.append(rows_idx); break
+        if not isinstance(out,dict): fails+=1; continue
+        e=max(abs(out['eta']-eta), abs(out['c'][0]-c[0]), abs(out['c'][1]-c[1]),
+              np.max(np.abs(out['q'][0]-q[0])), np.max(np.abs(out['q'][1]-q[1])),
+              abs(out['S'][0]-Sp), abs(out['S'][1]-Sm))
+        errs.append(e)
+    errs=np.array(errs)
+    print(f"(4) constructive inverse: {len(errs)} instances recovered, {fails} failures")
+    print("   error: median %.2e  90th %.2e  max %.2e" % (np.median(errs), np.percentile(errs,90), errs.max()))
+
+if __name__ == "__main__":
+    main()
