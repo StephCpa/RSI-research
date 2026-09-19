@@ -1,0 +1,121 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs,enumitem,array}
+\usepackage[hidelinks]{hyperref}
+\usepackage[expansion=false]{microtype}
+\setlist{nosep,leftmargin=1.5em}
+
+\newtheorem{proposition}{Proposition}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+\setcounter{lemma}{3}
+\setcounter{proposition}{3}
+\setcounter{corollary}{1}
+
+\newcommand{\status}[1]{\hfill{\normalfont\small\textsc{[#1]}}}
+\newcommand{\cV}{\mathcal{V}}
+\newcommand{\one}{\mathbf{1}}
+\newcommand{\Up}{U^{+}}
+
+\title{\textbf{v0.3 patch: Sections 4 and 5}\\[2pt]
+\large Block-level relation error, robustness of the non-identification,\\ and a corrected transformation-design statement}
+\author{Drop-in replacement for v0.2 \S4 and Proposition 4 \textperiodcentered{} 18 September 2026}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-2.5em}
+
+\paragraph{Editorial note.} Also fix the third sentence of the remark after Corollary~1 in both v0.1b and v0.2: it still reads $P(B\mid A)$ where it should read $P(B^+\mid A)$.
+
+%======================================================================
+\section*{4\quad Imperfect transformation relations}
+
+The identification results condition on exact label relations. In open domains this fails: a purported paraphrase may change meaning exactly on the hard cases. Let the intended relation for $\tau$ be $s_\tau$, let the actual relation on item $x$ be $s^\star_\tau(x)=Y(\tau x)Y(x)\in\{\pm1\}$, and define the relation-error indicator $E_\tau(x)=\mathbb{I}\{s^\star_\tau(x)\neq s_\tau\}$ with marginal rate $\eta_\tau=P(E_\tau=1)$; the transformation validity is $\rho_\tau=1-\eta_\tau$.
+
+\emph{$E_\tau$ is a property of the item and the check, not of a verifier.} Every verifier evaluated under $\tau$ inherits the same relation error, so the correct unit of analysis is the block of views $\cV_\tau=\{(j,\tau):j\in[m]\}$.
+
+\begin{lemma}[Relation error acts as a common sign flip on a block]\status{proved}
+Write $\sigma_\tau(x)=s_\tau s^\star_\tau(x)=1-2E_\tau(x)$. Let $W^\star$ denote normalized views under the true relation and $\widetilde W$ those reported under the intended relation. Then for every $j$,
+\[
+\widetilde W_{(j,\tau)}(x)=\sigma_\tau(x)\,W^\star_{(j,\tau)}(x),
+\]
+one sign shared by the whole block $\cV_\tau$. Consequently:
+\begin{enumerate}
+\item[(a)] \emph{Within-block comparisons are immune.} For $j,j'$ under the same $\tau$, $\mathbb{I}\{\widetilde W_{(j,\tau)}\neq\widetilde W_{(j',\tau)}\}=\mathbb{I}\{W^\star_{(j,\tau)}\neq W^\star_{(j',\tau)}\}$.
+\item[(b)] \emph{Cross-block comparisons carry the error.} With $D^\star_{j,\tau}=\mathbb{I}\{s^\star_\tau V_j(\tau x)\neq V_j(x)\}$ and $\widetilde D_{j,\tau}=\mathbb{I}\{s_\tau V_j(\tau x)\neq V_j(x)\}$ we have $\widetilde D_{j,\tau}=D^\star_{j,\tau}\oplus E_\tau$, hence
+$E[\widetilde D_{j,\tau}]=E[D^\star_{j,\tau}]+\eta_\tau-2E[D^\star_{j,\tau}E_\tau]$, and if $E_\tau\perp D^\star_{j,\tau}$ and $\eta_\tau<1/2$,
+\[
+E[D^\star_{j,\tau}]=\frac{E[\widetilde D_{j,\tau}]-\eta_\tau}{1-2\eta_\tau}.
+\]
+\item[(c)] \emph{Marginal correction does not recover the joint law.} The $m$ indicators $\{\widetilde D_{j,\tau}\}_{j\in[m]}$ share the single latent $E_\tau$, so the block's joint distribution is a two-component mixture over $\sigma_\tau\in\{\pm1\}$ with weights $(1-\eta_\tau,\eta_\tau)$, not a product, even when the verifiers are conditionally independent.
+\end{enumerate}
+\end{lemma}
+\begin{proof}
+Using the wrong sign flips the normalized transformed bit, which gives the displayed identity and, for $\pm1$-valued views, toggles the disagreement indicator; (a) follows because both views in the pair carry the same $\sigma_\tau$. Taking expectations gives (b), and under independence $E[D^\star E]=E[D^\star]\eta_\tau$, which inverts the affine relation. (c) is the law of total probability conditioning on $\sigma_\tau$.
+\end{proof}
+
+Part~(c) is the reason \S4 and backlog item~1 are one problem rather than two: imperfect relations are a concrete mechanism generating conditional dependence within a block. Proposition~2's count of conditionally independent views should therefore be read as a count of \emph{blocks}, and only when verifier errors are conditionally independent across blocks. Part~(a) is a usable design consequence: comparisons among verifiers run on the same transformed item carry no relation-validity risk, so pairs of the form (verifier $j$ vs.\ verifier $j'$, same $\tau$) are the safe comparisons when $\eta_\tau$ is unknown.
+
+\begin{corollary}[The non-identification is robust to any label-independent corruption]\status{proved}
+Suppose the reported views are generated from the true views by a channel $K(\widetilde w\mid w^\star)$ that does not depend on $Y$. The easy-positive type ($Y=+1$, all views correct) and the blind-false-accept type ($Y=-1$, all views wrong) both have $W^\star\equiv+\one$, so their reported laws are equal for every such $K$. Proposition~1's identified set for $\lambda_{B+}$ is unchanged.
+\end{corollary}
+\begin{proof}
+Both types put unit mass on $W^\star=+\one$; pushing that point mass through $K$ gives the same distribution.
+\end{proof}
+
+This covers independent relation errors, the block-correlated errors of Lemma~4, and arbitrary dependence among checks. It should be stated explicitly so that no reader takes the $\rho_\tau$ correction to narrow the identified set: Lemma~4 repairs disagreement \emph{rates}, never the easy/blind split. Only a channel that depends on $Y$ beyond $W^\star$ --- differential relation error, where validity degrades specifically on the hard or blind items --- can separate the two atoms. That direction breaks Lemma~4(b) while in principle aiding identification, and the information it supplies vanishes as $\eta_\tau\to0$; it is a sensitivity-analysis direction, not a fix.
+
+\begin{corollary}[Attenuation, and when the DSA form survives]\status{proved}
+Suppose each check carries at most one verifier, so the block flips are independent across views, with rates $\eta_v$. Then a DS item's view accuracy becomes
+\[
+\tilde\alpha_v=\alpha_v(1-\eta_v)+(1-\alpha_v)\eta_v ,
+\]
+and the reported data follow a DSA model with exact relations and accuracies $\tilde\alpha_v$. Propositions~1--3 apply verbatim with $\tilde\alpha$ in place of $\alpha$, and $\eta_v$ is not separately identified from $\alpha_v$: only the composite $\tilde\alpha_v$ is. With several verifiers per check, Lemma~4(c) applies and the DSA product form is lost.
+\end{corollary}
+
+So relation validity must be calibrated externally --- one more reason the first experiments belong in synthetic tasks, code transformations, and formal mathematics, where the label relation can be established independently of the verifiers.
+
+\begin{remark}[Spurious dissent on correct items]
+Take an item all of whose true views are correct and apply the checks in $S$ (the identity has $\sigma=+1$). The reported pattern is $\widetilde W_{(j,\tau)}=\sigma_\tau Y$, so the item leaves the unanimous stratum precisely when some selected check has a relation error, with probability $1-\prod_{\tau\in S}(1-\eta_\tau)$. Relation error therefore converts directly into false rejects under consistency gating. This is the term that couples \S4 to the design problem below.
+\end{remark}
+
+%======================================================================
+\section*{5\quad Transformation design}
+
+Let $\mathcal{C}$ be a finite catalog of candidate checks, fix a current scheme $S_0$ with blind false-accept event $B_0^+$, and for $\tau\in\mathcal{C}$ let $D_\tau\subseteq B_0^+$ be the event that running $\tau$ supplies a correct added view, so the item leaves the blind set. Assume each candidate check has an outcome distribution well defined independently of which others are selected. Define the oracle detected blind mass
+\[
+F_t(S)=P_{x\sim q_t}\Bigl(B_0^+\cap\bigcup_{\tau\in S}D_\tau\Bigr).
+\]
+
+\begin{proposition}[Coverage is submodular for consistency gates; threshold gates are different]\status{proved}
+\begin{enumerate}
+\item[(a)] $F_t$ is nonnegative, monotone and submodular. Under unit costs and $|S|\le K$, greedy satisfies $F_t(S_{\mathrm{greedy}})\ge\bigl(1-(1-1/K)^K\bigr)F_t(S^\ast)\ge(1-1/e)F_t(S^\ast)$. With nonuniform costs and a knapsack budget the same factor is available from a submodular-knapsack algorithm, but not from naive ratio-greedy.
+\item[(b)] $F_t$ measures the false-accept reduction only for a gate that rejects on \emph{any} inconsistency. For a gate that rejects only once at least $k\ge2$ views dissent, the relevant objective is
+$G_t^{(k)}(S)=P_{q_t}\bigl(B_0^+\cap\{|\{\tau\in S:D_\tau\}|\ge k\}\bigr)$, which is monotone but not submodular in general.
+\item[(c)] The truncated count $H_t^{(k)}(S)=E_{q_t}\bigl[\mathbb{I}\{B_0^+\}\min(|\{\tau\in S:D_\tau\}|,k)\bigr]$ is monotone submodular and can be used as a surrogate, with no approximation guarantee transferring to $G^{(k)}_t$.
+\end{enumerate}
+\end{proposition}
+\begin{proof}
+(a) $F_t$ is the measure of a union of events restricted to $B_0^+$; the marginal gain of $\tau$ is the mass of $D_\tau$ not already covered, which cannot increase as the selected set grows. The approximation statements are standard for monotone submodular maximization under a cardinality or knapsack constraint.
+(b) Monotonicity is immediate. For $k=2$ take two checks $a,b$ and an item mass $\mu$ detected by both and by no other check: $G(\emptyset)=G(\{a\})=G(\{b\})=0$ while $G(\{a,b\})=\mu$, so the marginal gain of $b$ is $\mu$ given $\{a\}$ and $0$ given $\emptyset$, violating diminishing returns.
+(c) For fixed $x$, $S\mapsto\min(|S\cap C_x|,k)$ is a concave function of a modular set function, hence submodular; nonnegative combinations preserve submodularity.
+\end{proof}
+
+\begin{remark}[The design problem needs a false-reject constraint]
+As stated, more checks are always weakly better, so only the budget prevents selecting the whole catalog --- yet Proposition~3(c) shows recall collapsing as views accumulate, and the remark above shows relation error producing false rejects at rate $1-\prod_{\tau\in S}(1-\eta_\tau)$. The design problem should therefore be
+\[
+\max_{S\subseteq\mathcal{C}} F_t(S)\quad\text{subject to}\quad \mathrm{FR}_t(S)\le\gamma,
+\]
+where $\mathrm{FR}_t(S)$ is the mass of genuinely correct items that the gate now rejects. $\mathrm{FR}_t$ is itself monotone and submodular, and maximizing a submodular function under a submodular constraint has no constant-factor guarantee in general. Replacing the constraint by the union bound $\mathrm{FR}_t(S)\le\sum_{\tau\in S}(\eta_\tau+\varepsilon_\tau)$, where $\varepsilon_\tau$ is the probability that the added view errs on a correct item, makes it a knapsack constraint and restores the guarantee of Proposition~4(a) for the relaxed problem.
+\end{remark}
+
+\begin{remark}[Estimating the objective]
+Proposition~4 concerns the oracle objective. Membership in $B_0^+$ includes the event $Y=-1$, so marginal gains must be estimated from audited samples of the current $\Up_t$ (Lemma~3), and selecting checks using the same audited sample that estimates their gains is adaptive reuse --- P3's problem, arriving here in a new form. If only marginal validities $\rho_\tau$ are known while validity errors are correlated across checks or with mechanisms, they do not determine $F_t$, and the joint detection events must be estimated or bounded.
+\end{remark}
+
+\end{document}
