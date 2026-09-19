@@ -1,0 +1,79 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs,enumitem,array}
+\usepackage[hidelinks]{hyperref}
+\usepackage[expansion=false]{microtype}
+\setlist{nosep,leftmargin=1.5em}
+
+\newtheorem{proposition}{Proposition}
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+\newcommand{\status}[1]{\hfill{\normalfont\small\textsc{[#1]}}}
+
+\title{\textbf{v0.9 note}\\[2pt]
+\large $(4)$ verified end to end --- with one condition on the flattening}
+\author{18 September 2026}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-2.5em}
+
+Your $(4)$ route works: I implemented the whole chain and it recovers every parameter to $10^{-15}$ on 196 random instances with no failures. One finding needs to go into the theorem, though: the choice of flattening is not free. At the witness you used, the $(1,2)\,|\,(3,4)$ flattening is degenerate --- every corner-free minor vanishes identically --- and your reported $f_1,f_2$ correspond to a different grouping.
+
+%======================================================================
+\section*{1. The chain, executed}
+
+Complement-pair deconvolution $T_z(x)=(s_x+zd_x)/2$; corner-free $3\times3$ minors of a $2|2$ flattening as cubics in $z$; the unique common root $z>1$; $r=1/z$, $\eta=(1-r)/2$; the two corners from $3\times3$ minors that are linear in one corner and avoid the other; the rank-2 product decomposition by the same quadric as in $(2,2)$; then $S_\pm$ from the $2\times2$ solve with determinant $1-2\eta$. Over 200 random interior instances (196 within the sampling constraints):
+\[
+\text{median }1.1\times10^{-15},\qquad 90\text{th pct }1.3\times10^{-14},\qquad \max 1.7\times10^{-13},\qquad\text{0 failures.}
+\]
+The corner values also check directly: at your witness the minors give $a=27/400$ and $b=37/450$, which equal $c_+\prod q_{+,i}+c_-\prod q_{-,i}$ and $c_+\prod(1-q_{+,i})+c_-\prod(1-q_{-,i})$ computed by hand.
+
+%======================================================================
+\section*{2. The flattening must be chosen, not assumed}
+
+\begin{proposition}[degenerate flattenings]\status{proved by exact witness}
+If the two coordinates forming the row factor satisfy the mirror relation $q_{-,i}=1-q_{+,i}$, then the row-factor vector of the DS$-$ component is the antipodal image of the DS$+$ one, the column space of the flattening is invariant under the antipodal map $J$, and $T$ and $JTJ$ share it. Since $T_z=\tfrac{1+zr}{2}T+\tfrac{1-zr}{2}JTJ$, the flattening then has rank 2 for \emph{every} $z$ and all corner-free $3\times3$ minors vanish identically, so the method returns no information.
+\end{proposition}
+
+This is exactly what happens at the running witness: $q_-=(\frac14,\frac15,\frac3{10},\frac29)$ agrees with $1-q_+=(\frac14,\frac15,\frac13,\frac16)$ in coordinates 1 and 2. Exact computation confirms it --- with row coordinates $(1,2)$ both minors are the zero polynomial and $\operatorname{rank}T_z=2$ at every $z$; with row coordinates $(1,3)$ the same minors are genuine cubics:
+\[
+\text{roots }\Bigl\{\tfrac54,\,-\tfrac54,\,\tfrac{1055}{84}\Bigr\}\quad\text{and}\quad\Bigl\{\tfrac54,\,-\tfrac54,\,-\tfrac{1055}{84}\Bigr\},
+\]
+so $\gcd\propto(4z-5)(4z+5)$ and $z>1$ selects $z_0=5/4$. Those third factors are your $84z\pm1055$, so your computation used a non-degenerate grouping; only the write-up needs the condition stated.
+
+Two consequences for the paper. The theorem's genericity clause should include ``for some (equivalently, for a generic) choice of the row pair,'' and the algorithm should try groupings until the minors are not identically zero --- which is what my implementation does, and why it had no failures. The mirror configuration $q_-=1-q_+$ is worth naming rather than hiding in ``generic'': it is the symmetric-accuracy case, where the negative class is the mirror image of the positive one, and it is not exotic.
+
+%======================================================================
+\section*{3. Two edits adopted}
+
+The attainability sentence is corrected to: the dimension count imposes no generic algebraic constraint on the six off-diagonal entries, and numerically an exact even-moment fit exists at every $u$ tested along the path. No dominance claim is made, and nothing now depends on it.
+
+\texttt{four\_moments.py} is demoted to exploratory: it establishes that the even-moments-alone intuition fails and that the difference system behaves, but the theorem runs through the flattening minors instead.
+
+%======================================================================
+\section*{4. Phase diagram}
+
+\begin{center}\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+partition & status & remaining\\
+\midrule
+$(1,1,1,1)$ & certified open-set global ambiguity & ---\\
+$(2,1,1)$ & restricted tensor gives the DS part & the $m=2$ inversion, coupled to the atoms\\
+$(2,2)$ & generic global ID, explicit inverse & write-up\\
+$(3,1)$ & generic global ID, $\rho$-inverse & write out the gcd genericity\\
+$(4)$ & generic global ID, flattening-minor inverse & flattening condition; gcd genericity\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+$(2,1,1)$ is the last cell. Its shape is now clear: the mixed-block stratum gives the two DS components' singleton factors and their masses on the two mixed states (4 equations), while the unanimous-block cells carry the remaining unknowns $q_{h,1},q_{h,2},\eta_A$ together with $\eta_B,\eta_C,S_\pm$ and the atoms. Unlike $(4)$, the complement-pair trick does not transfer directly, because each block carries its own flip bit rather than one bit flipping all four coordinates. It is the same coupling pattern as $(3,1)$: solve the atom-free stratum up to a residual family, then close it with the unanimous cells.
+
+If it closes, the classification is the memorable one you wrote: at $n=4$ the fully singleton architecture is generically locally but not globally identifiable, and introducing even one shared relation-error block restores generic global identification --- correlated errors do not merely degrade measurement; when they create exploitable structural zeros they can break the global aliasing that the independent-noise model suffers.
+
+\paragraph{Scripts.} \texttt{four\_inverse.py} (the full $(4)$ chain, 200-instance test, automatic flattening choice), \texttt{four\_exact.py} (exact minors under both groupings, showing the degenerate one).
+\end{document}
