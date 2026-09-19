@@ -1,0 +1,124 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs,enumitem,array}
+\usepackage[hidelinks]{hyperref}
+\usepackage[expansion=false]{microtype}
+\setlist{nosep,leftmargin=1.5em}
+
+\newtheorem{lemma}{Lemma}
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+\newcommand{\status}[1]{\hfill{\normalfont\small\textsc{[#1]}}}
+\newcommand{\Z}{\mathbb{Z}_2}
+\newcommand{\one}{\mathbf{1}}
+
+\title{\textbf{v1.2 note (freeze)}\\[2pt]
+\large Gauge lemma proved, quotient versus section, and the chamber}
+\author{18 September 2026}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-2.5em}
+
+Both revisions are right and are made. One addition to the chamber point: the restriction is \emph{pure} gauge fixing exactly when $T=1$, and for $T\ge2$ it selects one of $2^{T-1}$ chambers --- and the reason it cannot be absorbed by re-declaring individual label relations is the atoms.
+
+%======================================================================
+\section*{1. The gauge lemma is proved, not tested}
+
+\begin{lemma}[universal $\Z$ gauge]\status{proved}
+Write $K_\eta(q;x)=(1-\eta)P_q(x)+\eta P_q(-x)$ for one block. Since $P_{1-q}(x)=P_q(-x)$,
+\[
+K_{1-\eta}(1-q;x)=\eta P_q(-x)+(1-\eta)P_q(x)=K_\eta(q;x).
+\]
+Applying this to every block, and swapping the two DS components together with $S_+\leftrightarrow S_-$ (complementing $\eta_\tau$ exchanges the two atom components, since $A^+$ puts mass $1-\eta_\tau$ where $A^-$ puts $\eta_\tau$), leaves the reported law unchanged:
+\[
+\Phi(\theta)=\Phi(g\theta),\qquad g^2=e,\qquad
+\Theta\to\Theta/\Z\to\mathcal P(\mathcal W).
+\]
+\end{lemma}
+
+So the best any architecture can achieve without a chamber restriction is identifiability modulo this gauge, and the $n=4$ singleton aliasing is \emph{additional} ambiguity beyond it. \texttt{gauge.py} is relabelled as a regression test; its header now carries the proof.
+
+%======================================================================
+\section*{2. Quotient versus section}
+
+Corrected as you state. With $r=1-2\eta$, the gauge acts by $r\mapsto-r$, so $\rho=r^2$ is gauge-invariant and $z=1/r$ is not. The sentence becomes:
+
+\begin{quote}
+The $(3,1)$ reconstruction works directly in the gauge-invariant coordinate $\rho=(1-2\eta_A)^2$. In the $(4)$ reconstruction the two roots $z$ and $-z$ form a gauge pair, and the restriction $z>1$ selects the representative with $\eta<\tfrac12$.
+\end{quote}
+
+$\rho$ is a quotient coordinate; $z>1$ is a section. The same distinction applies to the $(2,1,1)$ eliminant: $\{\tfrac18,\tfrac78\}$ is a gauge orbit, and $\eta_B<\tfrac12$ is the section that picks $\tfrac18$.
+
+%======================================================================
+\section*{3. The chamber, with the count and the reason}
+
+Adopted: \emph{we restrict attention to the better-than-random chamber $r_\tau=1-2\eta_\tau>0$ for every check; within this chamber the restriction uniquely fixes the universal $\Z$ gauge.} Two things are worth adding.
+
+\begin{remark}[how much the chamber costs]
+The gauge acts on the sign pattern $(\operatorname{sgn}r_1,\dots,\operatorname{sgn}r_T)$ by global negation, so the $2^T$ patterns fall into $2^{T-1}$ orbits. Choosing the all-positive chamber therefore discards nothing when $T=1$ --- for a single block, $\eta<\tfrac12$ \emph{is} exactly gauge fixing, which is why $(4)$ needs no extra hypothesis here --- and selects one of $2^{T-1}$ orbits when $T\ge2$. In the $n=4$ table, $(2,2)$ and $(3,1)$ have two chambers, $(2,1,1)$ four, $(1,1,1,1)$ eight.
+\end{remark}
+
+\begin{remark}[why a mixed chamber cannot be relabelled away]
+One might hope to map $r_\tau<0$ into the chamber by re-declaring that check's label relation $s_\tau$, which flips the reported views of block $\tau$ alone. That works for the DS components but not for the model: the atom components are defined by the \emph{global} patterns $W^\star\equiv\pm\one$, and flipping one block's views moves them to mixed patterns, which the model class does not contain. The chamber restriction is therefore substantive for $T\ge2$, exactly as you say, and the atoms are the reason.
+\end{remark}
+
+%======================================================================
+\section*{4. Headline in two tiers, and $\Delta_\pi$}
+
+\[
+\boxed{\textbf{At }n=4,\ \text{ungauged}:\quad
+\begin{array}{ll}
+T<n &:\ \text{generically identifiable modulo the universal }\Z\text{ gauge},\\[1mm]
+T=n &:\ \text{additional open-set global aliasing beyond that gauge.}
+\end{array}}
+\]
+\[
+\text{Gauge-fixed corollary: on the chamber }r_\tau>0,\qquad T<n\ \Rightarrow\ \text{generic global ID.}
+\]
+
+The regularity conditions get explicit symbols, so that no verbal condition carries the uniqueness:
+\[
+\Delta_{(2,2)}=\det R_{MM}\cdot(\text{product-quadratic discriminant})\cdot(\text{atom-moment denominators}),
+\]
+\[
+\Delta_{(3,1)}=(\text{line--model nondegeneracy})\cdot\operatorname{Res}\text{-certificate that the common-}\rho\text{ gcd has degree }1,
+\]
+\[
+\Delta_{(4)}=\textstyle\prod_{\text{groupings}}(\text{corner-free minors not identically zero})\cdot(\text{corner slopes})\cdot(\text{rank-2 discriminant}),
+\]
+\[
+\Delta_{(2,1,1)}=\det\mathcal B\cdot\operatorname{lc}_{\eta_B}\bigl(\text{saturated eliminant}\bigr)\cdot(\text{subresultant certifying degree }2),
+\]
+\[
+\Delta_{(3,1,1)}=(\text{Kruskal factor determinants})\cdot\textstyle\prod_{k\neq\ell}(s_k^2-s_\ell^2),
+\]
+with the theorem reading ``for oriented-interior $\theta$ in the chamber with $\Delta_\pi(\theta)\neq0$'' and each $\Delta_\pi$ unpacked in the appendix, non-vacuous by its exact rational witness. Your referee concern is the right one to design against: the degree-two condition must be a finite set of polynomial nonvanishing conditions, not a restatement of the conclusion.
+
+%======================================================================
+\section*{5. For the merge}
+
+Superseded material, so it does not travel into the manuscript:
+\begin{center}\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+drop & keep instead\\
+\midrule
+v0.1 ``identified set unchanged'' (Cor.~2) & v0.3b (a)--(c): non-ID robust, set weakly widens\\
+v0.3 ``DSA form survives'' (Cor.~3) & v0.3c final form: DS attenuates, atoms disperse\\
+v0.7 sign-only uniqueness remark & v0.8: common-$\rho$; the gauge lemma explains why\\
+v0.4 ``$T$ or singleton count as the phase axis'' & v0.7 split: nuisance axis vs.\ zero geometry\\
+v0.8 ``every off-diagonal attainable'' & v0.9 wording: no dominance claim\\
+\texttt{two\_one\_one\_sat.py}, \texttt{four\_moments.py} (as theorem) & \texttt{two\_one\_one\_gb.py}; moments as exploratory\\
+scan frequencies (7/20, 10/20, 47/47, \dots) & appendix only; the theorems carry the claims\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Your hierarchy --- blind-set non-ID, $\Z$ gauge, singleton $3/4/5$ transition, block $n=4$ classification, gold audit --- puts the gauge before both identification theorems, which is right: it is the one ambiguity no architecture removes, and it makes the singleton aliasing legible as the thing that is \emph{not} symmetry.
+
+One last suggestion for the closing paragraph. The three-plate story now has a precise counterpart, and it is worth saying in the metrology vocabulary the paper opened with: a measurement scheme recovers a latent distinction only when some check responds to it differently than the truth does; correlating the errors across checks changes which distinctions have that property; and no amount of redundancy recovers a distinction that no check responds to at all. The gold audit is what remains once that is accepted.
+\end{document}
