@@ -1,5 +1,5 @@
 {
-  "protocol_version": "audit_prereg_v0_1",
+  "protocol_version": "audit_prereg_v0_2",
   "benchmark": {
     "name": null,
     "version_or_commit": null,
@@ -9,11 +9,17 @@
   },
   "candidate_generation": {
     "model_ids": [],
-    "samples_per_problem": null,
+    "samples_per_problem": 10,
     "temperature": null,
     "top_p": null,
     "max_tokens": null,
-    "seed": 20260919
+    "seed": 20260919,
+    "extension_rounds_per_problem": [
+      15,
+      20,
+      25,
+      30
+    ]
   },
   "judges": [
     {
@@ -36,5 +42,24 @@
   "candidate_budget": null,
   "unanimous_target": 1000,
   "kill_threshold_false_accept_rate": 0.005,
-  "audit_budgets": [25, 50, 100, 200, 500, 1000]
+  "audit_budgets": [
+    25,
+    50,
+    100,
+    200,
+    500,
+    1000
+  ],
+  "goldblind_budget_panel_u1_threshold": 0.6,
+  "cluster_bootstrap_reps": 10000,
+  "fixed_pool_cp_alpha": 0.05,
+  "main_text_relevance_threshold": 0.005,
+  "preflight_candidates": 50,
+  "fixed_diagnostic_cohort_samples_per_problem": 10,
+  "analysis": {
+    "primary_interval": "problem_cluster_bootstrap",
+    "fixed_pool_sensitivity": "clopper_pearson",
+    "primary_transformation_estimand": "r0_minus_r1",
+    "disagreement_only": "appendix_structural_control"
+  }
 }
