@@ -1,0 +1,103 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs,enumitem,array}
+\usepackage[hidelinks]{hyperref}
+\usepackage[expansion=false]{microtype}
+\setlist{nosep,leftmargin=1.5em}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+\newcommand{\status}[1]{\hfill{\normalfont\small\textsc{[#1]}}}
+
+\title{\textbf{v0.6 note}\\[2pt]
+\large The $(2,2)$ chain verified end to end, the $(3,1)$ missing dimension named,\\ and two corrections to v0.5}
+\author{18 September 2026}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-2.5em}
+
+The $(2,2)$ proof is correct and I have run it end to end: parameters recover to machine precision. The atom-free rank table reproduces exactly, and the one missing dimension at $(3,1)$ has a closed interpretation, which turns your ``real hard case A'' into a concrete coupling problem. Both v0.5 artifact errors are mine and are fixed.
+
+%======================================================================
+\section*{1. Corrections to v0.5}
+
+\paragraph{The minor table was wrong by $10^{30}$.} I typeset $a/b\cdot10^{15}$, which reads as $(a/b)\times10^{15}$ where the denominator is $b\times10^{15}$. Corrected, with full denominators, and with the permutation sign now accumulated during elimination (it was not before, which is why two signs disagreed with yours; they now agree exactly):
+
+\begin{center}\small
+\begin{tabular}{@{}lrl@{}}
+\toprule
+partition & $d$ & signed $d\times d$ minor on the pivot rows\\
+\midrule
+$(1,1,1,1)$ & 15 & $\dfrac{16611683826260677}{15992037016835457024000000000000000}$\\[2mm]
+$(2,1,1)$ & 14 & $\dfrac{222933686699647}{891610044825600000000000000000}$\\[2mm]
+$(2,2)$ & 13 & $\dfrac{102887201886931}{179159040000000000000000000000}$\\[2mm]
+$(3,1)$ & 13 & $\dfrac{20812752499}{663552000000000000000000000}$\\[2mm]
+$(4)$ & 12 & $-\dfrac{287159257}{26244000000000000000000000}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Exact exchangeable witness.} Your exact check replicates: at $w=(\frac15,\frac14,\frac16,\frac{23}{60})$ with $q_1=(\frac45,\frac45,\frac45,\frac34,\frac56)$, $q_2=(\frac14,\frac14,\frac14,\frac15,\frac3{10})$ and $\eta=(\frac1{10},\frac18,\frac19)$, exact \texttt{Fraction} elimination gives rank $16/16$ for $(3,1,1)$. So ``the closed form fails at exchangeable points while identification does not'' now rests on an exact witness rather than an SVD.
+
+%======================================================================
+\section*{2. The $(2,2)$ chain, executed}
+
+I implemented the four steps literally --- structural zeros, rank-2 completion $R_{UU}=R_{UM}R_{MM}^{-1}R_{MU}$, the atom moments $\mu=\operatorname{sgn}(m_A)\sqrt{m_Am_B/c}$ with $r_A=m_A/\mu$, $r_B=m_B/\mu$, $S_\pm=a(1\pm\mu)/2$, then deconvolution by $L_\eta^{-1}=((1-\eta)I+\eta F)^{-1}$ --- and recovered $(\eta_A,\eta_B,S_+,S_-,q_{\pm,1},q_{\pm,2})$ from the law alone on 200 random interior draws:
+\[
+\text{median error }1.1\times10^{-15},\qquad 90\text{th percentile }1.2\times10^{-14},\qquad\max 3.6\times10^{-13}.
+\]
+
+\begin{remark}[the last step can be a formula rather than a citation]
+For $(2,2)$ the closing Kruskal argument is replaceable by an explicit quadratic. After deconvolution, $R^\star$ has rank 2 and its column space is two-dimensional; a vector $v$ in that space is a \emph{product} distribution on the two views of block $A$ exactly when $v_{++}v_{--}-v_{+-}v_{-+}=0$, which is homogeneous of degree two. Writing $v=u+s\,w$ for a basis $(u,w)$ of the column space gives a scalar quadratic in $s$ whose two roots are the two DS components; the row space gives block $B$ the same way. So $(2,2)$ has a genuine closed-form inverse, like your size-3 block, and Kruskal is needed only as the conceptual statement. In my runs the quadratic is what buys the $10^{-15}$: a grid search over the same one-parameter family gave $4\times10^{-5}$.
+
+One bookkeeping point for the write-up: the quadratic yields the two components on each side separately, so the pairing across blocks must be fixed, either by the orientation $q_{+,v}>1/2>q_{-,v}$ or by checking which pairing reproduces $R$.
+\end{remark}
+
+%======================================================================
+\section*{3. What the missing dimension at $(3,1)$ is}
+
+Your atom-free table reproduces exactly: $(2,2)$ rank $12/12$, $(3,1)$ rank $11/12$, $(4)$ rank $11/11$; I add $(2,1,1)$, where there are only 8 atom-free cells for 13 DS parameters, so the rank is 8 and the cells bind rather than the structure.
+
+The deficient direction at $(3,1)$ is not mysterious. Computing the null vector and comparing it with the prediction
+\[
+\delta\eta_\tau=\varepsilon,\qquad \delta q_{h,\tau}=-\,\varepsilon\,\frac{1-2q_{h,\tau}}{1-2\eta_\tau},
+\]
+which is the direction that holds $p_{h,\tau}=\eta_\tau+(1-2\eta_\tau)q_{h,\tau}$ fixed for both DS components, gives a cosine of $1.000000000000$. So:
+
+\begin{proposition}[the atom-free stratum cannot see a singleton block's flip rate]\status{proved}
+For a block of size one, the DS part of the law depends on $(\eta_\tau,q_{+,\tau},q_{-,\tau})$ only through $p_{\pm,\tau}=\eta_\tau+(1-2\eta_\tau)q_{\pm,\tau}$. Hence the DS map restricted to atom-free cells loses at least one dimension per singleton block, and exactly one at $(3,1)$, where cells and parameters otherwise match.
+\end{proposition}
+
+This says the $(3,1)$ obstruction is a coupling problem rather than a wall: $\eta_\tau$ for a singleton block is precisely what the \emph{atom} cells pin down, since the atom components put mass $1-\eta_\tau$ and $\eta_\tau$ on the two unanimous states of that block. A proof for $(3,1)$ therefore has to use both strata at once --- recover what the atom-free stratum gives up to the one-dimensional family, then close it with the unanimous cells --- instead of trying to finish inside either stratum. That is a much more specific target than ``open''.
+
+It also explains the phase diagram without any appeal to $T$: what matters is how many blocks are singletons. Singleton blocks give the atoms full support (no structural zeros) \emph{and} hide their own flip rate from the atom-free stratum; blocks of size $\ge2$ do neither.
+
+%======================================================================
+\section*{4. The $n=4$ phase diagram, updated}
+
+\begin{center}\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+partition & status & mechanism\\
+\midrule
+$(1,1,1,1)$ & globally ambiguous on an open set (certified) & atoms have full support\\
+$(2,1,1)$ & restricted tensor gives the DS part; $m=2$ inversion open & one block with zeros\\
+$(2,2)$ & \textbf{generic global ID, closed-form inverse} & zeros $\to$ completion $\to$ moments\\
+$(3,1)$ & open; atom-free map loses exactly the singleton $\eta$ & needs both strata\\
+$(4)$ & open globally; atom-free map locally full rank & no tensor structure\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+I would write up $(2,2)$ first, as you propose, and I would present the chain with the quadratic so the section delivers an inverse rather than an existence theorem. The natural order after that is $(2,1,1)$ (small algebra), then $(3,1)$ with the coupling statement above as its opening move, and $(4)$ last, where the question is purely global.
+
+\paragraph{Bundle.} The duplicate-upload collision is not in the source: \texttt{blocks.py} defines \texttt{make}, \texttt{rank\_check}, \texttt{global\_scan} with the demo under \texttt{\_\_main\_\_}, and \texttt{exch\_check.py}, \texttt{cond\_blocks.py}, \texttt{run\_n4.py}, \texttt{run\_n5.py} import from it by \texttt{\_\_file\_\_} path. Keep one \texttt{blocks.py} in the final bundle and delete the older copy.
+
+\paragraph{New scripts.} \texttt{two\_two.py} (the $(2,2)$ chain, 200-draw recovery test), \texttt{atomfree.py} (atom-free ranks and the $(3,1)$ null direction), \texttt{exact\_blocks.py} (now sign-tracking, plus the exact exchangeable witness).
+\end{document}
