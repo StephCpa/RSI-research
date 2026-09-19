@@ -1,0 +1,101 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs,enumitem,array}
+\usepackage[hidelinks]{hyperref}
+\usepackage[expansion=false]{microtype}
+\setlist{nosep,leftmargin=1.5em}
+
+\newtheorem{proposition}{Proposition}
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+\newcommand{\status}[1]{\hfill{\normalfont\small\textsc{[#1]}}}
+\newcommand{\Wt}{\widetilde{W}}
+\newcommand{\one}{\mathbf{1}}
+
+\title{\textbf{v0.4 note}\\[2pt]
+\large Block-correlated identification: the phase diagram over $(T,m_1,\dots,m_T)$,\\ with a first numerical pass}
+\author{18 September 2026}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-2.5em}
+
+Your framing is right and the two sentences go into the merged memo as written. This note records the block model, checks the dimension and Kruskal claims, and reports a first numerical pass over partitions --- which turns up one result worth having before any theorem work starts: at $n=4$ the global ambiguity appears \emph{only} in the singleton partition, and at $n=5$ the $(3,1,1)$ partition looks globally identified even though the Kruskal route does not cover it.
+
+%======================================================================
+\section*{1. The model and the two claims}
+
+Checks $\tau=1,\dots,T$ carry $m_\tau$ verifiers with $\sum_\tau m_\tau=n$, and one relation bit $E_\tau$ flips every view in its block: $\Wt_{j\tau}=(-1)^{E_\tau}W^\star_{j\tau}$. Parameters are three free weights, per-view $q_{1v},q_{2v}$ (the two DS components' probabilities of $W^\star=+1$), and one $\eta_\tau$ per check:
+\[
+d=3+2n+T .
+\]
+The singleton case $T=n$ recovers $3+3n$.
+
+\paragraph{The dimension barrier is universal.} For $n\le3$ and any partition, $d\ge 2n+4>2^n-1$ ($10>7$, $8>3$, $6>1$), so no block structure rescues three or fewer views. At $n=4$, $d=11+T\in[12,15]$ against 15 cells, so every partition is dimensionally capable and dimension decides nothing.
+
+\paragraph{Blocks as categorical variables.} If the $E_\tau$ are independent across checks, the blocks $Z_\tau\in\{\pm1\}^{m_\tau}$ are conditionally independent given the latent component, so the law is a four-class latent model on $T$ categorical variables of alphabet $2^{m_\tau}$. Grouping blocks --- indivisibly --- into $G_1,G_2,G_3$ with $M_g=\sum_{\tau\in G_g}m_\tau$ gives generic Kruskal ranks $\min(4,2^{M_g})$ and the sufficient condition
+\[
+\sum_{g=1}^{3}\min(4,2^{M_g})\ \ge\ 10 = 2r+2 .
+\]
+Your examples check out: $(2,2,1)$ gives $4+4+2=10$; $(2,1,1,1)$ regroups as $2,1{+}1,1$ for $4+4+2=10$; $(3,1,1)$ admits only the grouping into its own three blocks, giving $4+2+2=8$, since a block of size 3 has Kruskal rank $\min(4,8)=4$ and each singleton has 2. So the route fails at $(3,1,1)$ while total $n=5$ is unchanged, which is the point: identifiability is a property of the partition, not of $n$.
+
+%======================================================================
+\section*{2. First numerical pass}
+
+Sampling the underlying domain ($q_{1v}>1/2>q_{2v}$, $\eta_\tau<1/2$, weights on the simplex by softmax), Jacobian ranks were computed at random points and a constrained multistart scan looked for second feasible roots per target law.
+
+\begin{center}\small
+\begin{tabular}{@{}llrrcl@{}}
+\toprule
+$n$ & partition & $d$ & cells & Jacobian rank & laws with $>1$ feasible root\\
+\midrule
+4 & $(1,1,1,1)$ & 15 & 15 & 15 & \textbf{2 of 6} (counts 2,1,1,1,1,2)\\
+4 & $(2,1,1)$   & 14 & 15 & 14 & 0 of 6\\
+4 & $(2,2)$     & 13 & 15 & 13 & 0 of 6\\
+4 & $(3,1)$     & 13 & 15 & 13 & 0 of 6\\
+4 & $(4)$       & 12 & 15 & 12 & 0 of 6\\
+\midrule
+5 & $(1,1,1,1,1)$ & 18 & 31 & 18 & 0 of 5\\
+5 & $(2,1,1,1)$   & 17 & 31 & 17 & 0 of 5\\
+5 & $(2,2,1)$     & 16 & 31 & 16 & 0 of 5\\
+5 & $(3,1,1)$     & 16 & 31 & 16 & 0 of 5\\
+5 & $(3,2)$       & 15 & 31 & 15 & 0 of 5\\
+5 & $(5)$         & 14 & 31 & 14 & 0 of 5\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Two readings, both to be treated as exploratory --- the frequencies depend on the sampler and the multistart budget, and multistart never proves that no further root exists.
+
+\begin{enumerate}
+\item \emph{The $n=4$ ambiguity looks like a just-identification phenomenon.} The singleton partition is the unique $n=4$ case with $d=15$ equal to the number of cells, and it is the only one where second roots appeared. Every coarser partition is overdetermined and returned a single root throughout. So the certified open-set ambiguity may be specific to the idealized one-verifier-per-check architecture, and the realistic architecture --- several verifiers sharing a check --- may be better behaved, because sharing a relation bit removes parameters faster than it removes cells. That is worth a conjecture: \emph{at $n=4$, global ambiguity occurs only for $T=n$.}
+\item \emph{The Kruskal condition is sufficient, not necessary.} $(3,1,1)$ fails the grouping condition but showed full rank and no second root. The natural proof for it is your expanded-flip representation: absorb $E_\tau$ into the latent state, so a block of size $m$ contributes a structured mixture with tied weights rather than an indivisible categorical variable. $(3,1,1)$ is the right first target for that route, since the block-level route provably does not reach it.
+\end{enumerate}
+
+\begin{remark}[conditioning]
+Median $\sigma_{\min}/\sigma_{\max}$ improves as blocks coarsen: at $n=4$, $3.5\times10^{-4}$ for $(1,1,1,1)$ against $5.4\times10^{-3}$ for $(4)$; at $n=5$, $2.4\times10^{-3}$ for $(1^5)$ against $1.3\times10^{-2}$ for $(3,2)$. As before this is parameterization-dependent and not a statistical claim; it is consistent with the parameter count falling faster than the information, but a Fisher-information comparison at matched sample size is the way to settle whether coarse blocks are genuinely easier to estimate or merely easier to identify.
+\end{remark}
+
+%======================================================================
+\section*{3. Text for the merged memo}
+
+Verbatim, after the phase-transition theorem:
+
+\begin{quote}
+The $3/4/5$ phase transition is proved only for singleton relation-error blocks. When several verifiers share a check, their reported views share the same relation-error variable, so identifiability depends on the block partition $(m_1,\dots,m_T)$, not only on the total view count $n$. Characterizing local and global identification over this block structure is left open.
+
+The dimension barrier $n\le3$ remains universal, while for global identification the natural sufficient condition is a Kruskal condition on three groups of whole relation-error blocks.
+\end{quote}
+
+%======================================================================
+\section*{4. Where this leaves the program}
+
+The block phase diagram over $(T,m_1,\dots,m_T)$ is the better next target, and the numerics above already sharpen it into three concrete questions: (i) prove generic local identifiability for every $n=4$ partition, where dimension permits it; (ii) prove or refute the conjecture that global ambiguity at $n=4$ occurs only at $T=n$; (iii) prove generic global identification for $(3,1,1)$ via the expanded-flip representation, establishing that the Kruskal condition is strictly sufficient.
+
+The generic fiber degree now looks even more like a refinement of a single cell --- the $n=4$, $T=n$ cell --- which is an argument for deferring it, not against computing it eventually.
+
+\paragraph{Scripts.} \texttt{blocks.py} (block model, rank and multistart scans), \texttt{run\_n4.py}, \texttt{run\_n5.py}, \texttt{cond\_blocks.py}.
+\end{document}
