@@ -1,0 +1,139 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs,enumitem,array}
+\usepackage[hidelinks]{hyperref}
+\usepackage[expansion=false]{microtype}
+\setlist{nosep,leftmargin=1.5em}
+
+\newtheorem*{corthree}{Corollary 3 (final form)}
+\newtheorem*{proptwo}{Proposition 2$'$ (corrupted model)}
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+\newcommand{\status}[1]{\hfill{\normalfont\small\textsc{[#1]}}}
+\newcommand{\Wt}{\widetilde{W}}
+\newcommand{\one}{\mathbf{1}}
+
+\title{\textbf{v0.3c patch}\\[2pt]
+\large Corollary 3 in final form, and the local/global identification threshold\\ for the relation-corrupted model}
+\author{18 September 2026}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-2.5em}
+
+\paragraph{Status.} All three Corollary~3 corrections are adopted. The global-ambiguity finding replicates and is stronger than one instance: in my scan, 7 of 20 random in-domain laws at $n=4$ admitted more than one regular solution. I verified the rational witness determinant exactly and get the same value. The sampling domain in \texttt{corrupted.py} is fixed, the conditioning claim is weakened, and the two-knapsack point is adopted. One piece of good news at the end: the same many-truths test applied to the DSA model of v0.1b found no ambiguity, so that memo's Proposition~2 survives the stronger standard.
+
+%======================================================================
+\section*{Corollary 3, final form}
+
+\begin{corthree}\status{proved}
+Assume no two views share a check, so the relation-error blocks of Lemma~4 are singletons; assume the per-view relation errors $E_v$ are mutually independent and nondifferential, i.e.\ independent of verifier correctness given $(Y,H)$, with rates $\eta_v$. Then:
+\begin{enumerate}
+\item[(a)] \emph{The DS component survives with attenuated class-specific accuracies.} For $y\in\{\pm1\}$,
+\[
+\tilde\alpha_v^{\,y}=\alpha_v^{\,y}(1-\eta_v)+(1-\alpha_v^{\,y})\eta_v=\tfrac12+(1-2\eta_v)\bigl(\alpha_v^{\,y}-\tfrac12\bigr),
+\]
+and $\eta_v$ is not separately identified from $\alpha_v^{\,y}$ within this component.
+\item[(b)] \emph{The atoms do not survive.} $E^+$ and $B^+$ both had $W^\star\equiv+\one$ and become the same product component with $P(\Wt_v=+1)=1-\eta_v$; $E^-,B^-$ become a product with $P(\Wt_v=+1)=\eta_v$. The reported law is a four-component product mixture whose two atom-derived components are tied through $\eta$, not a DSA law.
+\item[(c)] Proposition~1 survives in the strong form. Proposition~2 must be replaced by Proposition~2$'$ below. Proposition~3(a) and 3(c) fail. Proposition~3(b) holds under the uniform margin conditions
+\[
+\inf_{v,y}\alpha_v^{\,y}>\tfrac12,\qquad \sup_v\eta_v<\tfrac12,
+\]
+which give $\inf_{v,y}\tilde\alpha_v^{\,y}>1/2$ and hence exponential Hoeffding rates: the majority gate has $\mathrm{FA}\to\lambda_{B+}$ and precision $\to(c_++\lambda_{E+})/(c_++S_+)$, with $c_+$ the DS-positive \emph{mixture mass}, which corruption does not change.
+\end{enumerate}
+\end{corthree}
+
+%======================================================================
+\section*{Proposition 2$'$: what is identified in the corrupted model}
+
+Parameterize the reported law by three free weights and, per view, the two DS component probabilities and $\eta_v$: $3+3n$ parameters against $2^n-1$ independent cell probabilities. The model domain is $\eta_v<p_{2v}<1/2<p_{1v}<1-\eta_v$, which is exactly what underlying accuracies $\alpha_v^{\,y}>1/2$ and $\eta_v<1/2$ imply.
+
+\begin{proptwo}
+\begin{enumerate}
+\item[(a)] $n\le3$: not identifiable, by dimension ($12>7$ at $n=3$). \status{proved}
+\item[(b)] $n=4$: generic local identifiability. \status{proved}
+\item[(c)] $n=4$: \emph{not} globally identifiable on an open region. \status{numerical evidence}
+\item[(d)] $n\ge5$: generic global identifiability. \status{conjecture, with a proof route}
+\end{enumerate}
+\end{proptwo}
+
+\paragraph{(b) is now a theorem.} Each cell probability is degree at most one in every coordinate, so the Jacobian entries are polynomials in the parameters and a central difference with an exact rational step returns the exact derivative. At the rational witness
+\[
+(w_1,w_2,w_3)=\bigl(\tfrac15,\tfrac14,\tfrac16\bigr),\quad
+p_1=\bigl(\tfrac34,\tfrac45,\tfrac23,\tfrac56\bigr),\quad
+p_2=\bigl(\tfrac14,\tfrac15,\tfrac3{10},\tfrac29\bigr),\quad
+\eta=\bigl(\tfrac1{10},\tfrac18,\tfrac1{12},\tfrac19\bigr),
+\]
+exact rational elimination gives
+\[
+\det J=\frac{175860798435553}{5349660268953600000000000000000}\approx3.287\times10^{-17}\neq0 .
+\]
+I reproduce this value exactly. Hence $\det J$ is not the zero polynomial and full rank holds on a Zariski-open dense subset of the parameter space.
+
+\paragraph{(c) replicates, and is not a single instance.} Sampling target laws from the valid domain and running 120 constrained multistarts per law, 7 of 20 laws admitted more than one distinct in-domain solution, some as many as four, with $\max|\theta-\theta_{\text{true}}|$ up to $0.43$. On two laws inspected in detail, both roots had full-rank ($15/15$) Jacobians, sat strictly inside the domain, and reproduced the target law to machine precision ($\le3\times10^{-17}$). These are regular points with distinct local inverse branches, not boundary or singular artifacts. Multiplicity is region-dependent: the remaining 13 laws returned the generating solution only, which is why a single-truth check --- the kind I ran originally --- can miss it entirely.
+
+\paragraph{(d) the Kruskal route.} The reported law is a four-component mixture of Bernoulli products. Group five binary views as $2+2+1$: generically the two paired factor matrices have Kruskal rank 4 and the single view has Kruskal rank 2, giving $4+4+2=10=2r+2$ for $r=4$, exactly Kruskal's threshold, which is the route Allman, Matias and Rhodes use for finite mixtures of product distributions. Component labels are then fixed by the tie (one pair of components must have probabilities summing to one view-wise) together with the orientation constraints $p_1>1/2>p_2$. In a scan of 10 laws at $n=5$ with 80 starts each, no second in-domain root appeared. This should be stated as a conjecture with a proof route, not as a result.
+
+\medskip
+\noindent The statement to carry into the paper is therefore:
+\[
+\boxed{\begin{array}{l}
+n\le3:\ \text{dimensionally impossible}\\
+n=4:\ \text{generic local identifiability, global ambiguity}\\
+n\ge5:\ \text{candidate generic global identifiability}
+\end{array}}
+\]
+and the earlier sentence ``the view threshold does not increase: four views remain enough'' should be deleted. ``Identified'' in Proposition~2 must from now on be read as ``generic full Jacobian rank'' unless global uniqueness is separately established.
+
+\paragraph{Good news for v0.1b.} The same many-truths test applied to the DSA off-atom map --- 20 random laws, 100 multistarts each, at $n=4$ and $n=5$ --- returned the generating solution only, in every case. The v0.1b evidence for Proposition~2 was a single-truth check, so it deserved this scrutiny; it survives it.
+
+%======================================================================
+\section*{Numerical domain and conditioning}
+
+\texttt{corrupted.py} now samples underlying $\alpha_v^{\pm}\in(0.6,0.95)$ and $\eta_v\in(0.02,0.30)$ and constructs $p_1,p_2$ from them, so every sampled point satisfies $\eta_v<p_{2v}<1/2<p_{1v}<1-\eta_v$. Ranks are unchanged on the corrected domain.
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}ccccc@{}}
+\toprule
+$n$ & parameters & independent equations & Jacobian rank & median $\sigma_{\min}/\sigma_{\max}$\\
+\midrule
+4 & 15 & 15 & 15 & $4.7\times10^{-4}$\\
+5 & 18 & 31 & 18 & $5.3\times10^{-3}$\\
+6 & 21 & 63 & 21 & $7.3\times10^{-3}$\\
+7 & 24 & 127 & 24 & $9.2\times10^{-3}$\\
+\bottomrule
+\end{tabular}
+\caption{Valid-domain sampling, 20 random points per row, ranks identical across points.}
+\end{table}
+
+\begin{remark}[Conditioning, stated weakly]
+The raw Jacobian condition ratio is small throughout this parameterization and does not deteriorate as $\eta\to0$ along the tested path ($9.1\times10^{-4}$ at $\eta=0.2$ rising to $6.3\times10^{-3}$ at $\eta=10^{-3}$, $n=6$). Because $\sigma_{\min}/\sigma_{\max}$ depends on parameter scaling, on the probability coordinates, and on which simplex coordinate is dropped, this is not a statistical claim. A weak-identification statement about $S_+$ requires a profile likelihood or a properly scaled Fisher-information calculation.
+\end{remark}
+
+%======================================================================
+\section*{Section 5: units, and how many knapsacks}
+
+Define the positive-class dissent mass of a check,
+\[
+r^+_\tau=P\bigl(Y=+1,\ R_\tau=1\bigr),\qquad\text{so}\qquad \mathrm{FR}_t(S)=P\Bigl(Y=+1,\ \bigcup_{\tau\in S}\{R_\tau=1\}\Bigr)\le\sum_{\tau\in S}r^+_\tau .
+\]
+This keeps both sides on the same scale; the earlier relaxation $\sum_\tau(\eta_\tau+\varepsilon_\tau)$ mixed a joint mass with conditional rates. If a verifier/relation decomposition is wanted, the components must themselves be defined as positive-class masses.
+
+With the check-cost budget retained, the relaxed design problem carries two modular constraints,
+\[
+\sum_{\tau\in S}c_\tau\le C,\qquad \sum_{\tau\in S}r^+_\tau\le\gamma,
+\]
+so single-knapsack Sviridenko does not apply verbatim. For any fixed number $d$ of knapsack constraints, monotone submodular maximization admits $1-1/e-\varepsilon$ approximations (Kulik, Shachnai and Tamir), which is the correct citation here. Sviridenko's statement applies only if cost and false-reject budget are folded into a single knapsack.
+
+%======================================================================
+\section*{What I would do next}
+
+The $4/5$ distinction is a better centerpiece than the original ``four instead of three'' observation, and it is close to provable: (b) is done, (d) has a concrete Kruskal route, and (c) needs either a symbolic elimination showing the $n=4$ system has several in-domain roots on an open set, or a clean two-root witness with exact rational coordinates. A witness would be worth more than more multistarts. That sequencing also demotes the DSA-only four-view proof, which is now the $\eta=0$ boundary case of the interesting statement.
+
+\paragraph{References added.} Allman, Matias \& Rhodes, \emph{Ann.\ Statist.} 2009 (arXiv:0809.5032); Kruskal, \emph{Linear Algebra Appl.} 1977; Sviridenko, \emph{Oper.\ Res.\ Lett.} 2004; Kulik, Shachnai \& Tamir, approximations for monotone submodular maximization with knapsack constraints (arXiv:1101.2940); Iyer \& Bilmes, NeurIPS 2013.
+
+\end{document}
