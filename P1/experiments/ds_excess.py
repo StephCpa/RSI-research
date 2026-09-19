@@ -245,6 +245,25 @@ def main():
     outdir.mkdir(parents=True, exist_ok=True)
     (outdir / "ds_excess_summary.json").write_text(json.dumps(summary, indent=2) + "\n")
 
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    fig,ax=plt.subplots(figsize=(4.8,3.2))
+    obs=[stat["obs_plus"],stat["obs_minus"]]
+    pred=[stat["pred_plus"],stat["pred_minus"]]
+    x=np.arange(2)
+    width=.34
+    ax.bar(x-width/2,obs,width,label="observed")
+    ax.bar(x+width/2,pred,width,label="independent-error null")
+    ax.set_xticks(x,["all +","all -"])
+    ax.set_ylabel("reported-pattern mass")
+    ax.set_title(f"excess + = {stat['excess_plus']:.3g}")
+    ax.legend(fontsize=7)
+    fig.tight_layout()
+    fig.savefig(outdir/"ds_excess.pdf")
+    fig.savefig(outdir/"ds_excess.png",dpi=180)
+    plt.close(fig)
+
     with (outdir / "ds_excess_bootstrap.csv").open("w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["excess_plus", "excess_minus", "c_ds"])
