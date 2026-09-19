@@ -38,6 +38,12 @@ REQUIRED_PATHS = [
     ("practical_blind_error_bar",),
     ("judge_quality_upper_bar",),
     ("fixed_pool_precision_halfwidth_target",),
+    ("judge_repeatability", "fraction"),
+    ("judge_repeatability", "seed"),
+    ("robustness_benchmark", "name"),
+    ("robustness_benchmark", "version_or_commit"),
+    ("robustness_benchmark", "problem_manifest"),
+    ("robustness_benchmark", "samples_per_problem"),
 ]
 
 
@@ -100,6 +106,8 @@ def main():
     ]
     if cfg.get("metamorphic_manifest"):
         file_keys.append(("metamorphic_manifest",))
+    if cfg.get("robustness_benchmark", {}).get("problem_manifest"):
+        file_keys.append(("robustness_benchmark", "problem_manifest"))
 
     hashes = {}
     for path in file_keys:
@@ -116,6 +124,9 @@ def main():
         HERE / "audit_allocation.py",
         HERE / "audit_analysis_spec_v0_1.md",
         HERE / "audit_prereg_v0_3.md",
+        HERE / "judge_repeatability.py",
+        HERE / "ast_hash.py",
+        HERE / "base_test_split.py",
         HERE / "freeze_audit_config.py",
     ]
     for p in analysis_files:
@@ -140,6 +151,9 @@ def main():
     print("analysis_spec_sha256:", hashes["audit_analysis_spec_v0_1.md"])
     print("ds_excess_sha256:", hashes["ds_excess.py"])
     print("allocation_sha256:", hashes["audit_allocation.py"])
+    print("repeatability_sha256:", hashes["judge_repeatability.py"])
+    print("ast_hash_sha256:", hashes["ast_hash.py"])
+    print("base_test_split_sha256:", hashes["base_test_split.py"])
     print("wrote:", out)
 
 
