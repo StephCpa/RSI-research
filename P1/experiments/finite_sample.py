@@ -6,9 +6,9 @@ Outputs:
   - recovery-error-vs-regularity-margin figure
 
 Methods:
-  constructive       population inverse applied to the empirical law
-  mle_random          constrained MLE, best of random starts
-  mle_constructive    constrained MLE initialized at the constructive estimate
+  constructive         population inverse applied to the empirical law
+  mle_constructive     one constrained-MLE run initialized at the constructive estimate
+  mle_random_k<K>      best constrained MLE after K random starts; K is preregistered
 
 The regularity_margin column is a normalized numerical proxy built from the
 same determinants/discriminants/denominators that define the algebraic regular
@@ -201,7 +201,16 @@ def regularity22(t):
     sb = np.linalg.svd(bvec, compute_uv=False)
     sep = min(sa[-1] / sa[0], sb[-1] / sb[0])
 
-    factors = np.array([mm_margin, mu, abs(rA), abs(rB), sep, atom_mass], dtype=float)
+    factors = np.array([
+        mm_margin,
+        mu,
+        abs(rA),
+        abs(rB),
+        sep,
+        atom_mass,
+        min(w[0], w[1]),
+        min(w[2], w[3]),
+    ], dtype=float)
     return float(max(np.min(factors), 1e-14))
 
 
@@ -401,8 +410,55 @@ def error4(est, truth):
     ))
 
 
+def _normalized_minor_signal(lin, rows_idx):
+    """Scale-free coefficient norm for corner-free 3x3 determinant polynomials.
+
+    A determinant coefficient is cubic in the affine entry coefficients.  We
+    divide its coefficient l2 norm by the cube of the selected-entry l2 scale.
+    """
+    import itertools
+    ca, cb = _corner_positions(rows_idx)
+    best = 0.0
+    zs = np.array([-1.5, -0.5, 0.5, 1.5])
+    V = np.vander(zs, 4, increasing=True)
+    for rows in itertools.combinations(range(4), 3):
+        for cols in itertools.combinations(range(4), 3):
+            if (ca[0] in rows and ca[1] in cols) or (cb[0] in rows and cb[1] in cols):
+                continue
+            vals = []
+            coeff_scale = 0.0
+            for z in zs:
+                A = np.array([[lin[i, j, 0] + z * lin[i, j, 1] for j in cols] for i in rows])
+                vals.append(np.linalg.det(A))
+            for i in rows:
+                for j in cols:
+                    coeff_scale += lin[i, j, 0] ** 2 + lin[i, j, 1] ** 2
+            coeff = np.linalg.solve(V, np.asarray(vals))
+            denom = max(coeff_scale ** 1.5, 1e-15)
+            best = max(best, float(np.linalg.norm(coeff) / denom))
+    return best
+
+
+def _normalized_corner_slope(Tm, pos, other):
+    """Maximum scale-free cofactor used for linear corner recovery."""
+    import itertools
+    best = 0.0
+    for rows in itertools.combinations(range(4), 3):
+        for cols in itertools.combinations(range(4), 3):
+            if pos[0] not in rows or pos[1] not in cols:
+                continue
+            if other[0] in rows and other[1] in cols:
+                continue
+            A = np.array([[Tm[i, j] for j in cols] for i in rows], dtype=float)
+            ii, jj = rows.index(pos[0]), cols.index(pos[1])
+            C = np.delete(np.delete(A, ii, axis=0), jj, axis=1)
+            denom = max(np.linalg.norm(C[0]) * np.linalg.norm(C[1]), 1e-15)
+            best = max(best, abs(np.linalg.det(C)) / denom)
+    return float(best)
+
+
 def regularity4(t):
-    """Numerical regularity margin, maximized over the three flattenings."""
+    """Frozen scale-free regularity margin, maximized over the three flattenings."""
     p = law4_vec(t)
     P = {x: float(p[i]) for i, x in enumerate(fi.CELLS)}
     z0 = 1 / (1 - 2 * t["eta"])
@@ -410,12 +466,11 @@ def regularity4(t):
     for rows_idx in [(0, 1), (0, 2), (0, 3)]:
         lin = _lin4(P, rows_idx)
         minors = _corner_free_minors(lin, rows_idx)
-        # Non-identically-zero minor signal.
-        signal = max((sc for _, sc in minors), default=0.0)
+        signal = _normalized_minor_signal(lin, rows_idx)
         Tm = np.array([[lin[i, j, 0] + z0 * lin[i, j, 1] for j in range(4)] for i in range(4)])
         ca, cb = _corner_positions(rows_idx)
-        a, slope_a = _solve_corner_ls(Tm, ca, cb)
-        b, slope_b = _solve_corner_ls(Tm, cb, ca)
+        a, _ = _solve_corner_ls(Tm, ca, cb)
+        b, _ = _solve_corner_ls(Tm, cb, ca)
         if a is None or b is None:
             continue
         Tm[ca], Tm[cb] = a, b
@@ -425,11 +480,15 @@ def regularity4(t):
         B2 = u[0] * wv[3] + wv[0] * u[3] - u[1] * wv[2] - wv[1] * u[2]
         C2 = u[0] * u[3] - u[1] * u[2]
         disc = max(B2 * B2 - 4 * A2 * C2, 0.0)
+        coeff_norm2 = A2 * A2 + B2 * B2 + C2 * C2
+        disc_margin = disc / max(coeff_norm2, 1e-15)
+        slope_a = _normalized_corner_slope(Tm, ca, cb)
+        slope_b = _normalized_corner_slope(Tm, cb, ca)
         factors = [
             signal,
-            abs(slope_a),
-            abs(slope_b),
-            math.sqrt(disc),
+            slope_a,
+            slope_b,
+            disc_margin,
             abs(1 - 2 * t["eta"]),
             min(t["c"]),
             min(t["S"]),
@@ -472,36 +531,107 @@ def fit_mle(counts, partition, starts, rng, init=None, maxiter=1200):
     return None if best is None else decode(best.x)
 
 
+def fit_mle_restart_curve(counts, partition, restart_grid, rng, maxiter=1200):
+    """Return cumulative-best random-start MLE at each K in restart_grid."""
+    counts = np.asarray(counts, dtype=float)
+    restart_grid = sorted(set(int(k) for k in restart_grid))
+    if not restart_grid or restart_grid[0] < 1:
+        raise ValueError("restart_grid must contain positive integers")
+
+    if partition == "22":
+        decode, law, dim = decode22, law22_vec, 13
+    else:
+        decode, law, dim = decode4, law4_vec, 12
+
+    def nll(x):
+        p = np.clip(law(decode(x)), 1e-14, 1)
+        return float(-np.dot(counts, np.log(p)))
+
+    best = None
+    out = {}
+    for k in range(1, max(restart_grid) + 1):
+        x0 = rng.normal(0, 1.2, dim)
+        opt = minimize(nll, x0, method="L-BFGS-B",
+                       options={"maxiter": maxiter, "ftol": 1e-10, "gtol": 1e-7})
+        if np.isfinite(opt.fun) and (best is None or opt.fun < best.fun):
+            best = opt
+        if k in restart_grid:
+            out[k] = None if best is None else decode(best.x)
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Study
 # ---------------------------------------------------------------------------
 
-def summarize_rows(rows, outdir):
+def _finite(rows, part, method):
+    return [
+        r for r in rows
+        if r["partition"] == part and r["method"] == method
+        and np.isfinite(float(r["error"]))
+    ]
+
+
+def _scaling_regression(rows, part, boot_reps=1000, seed=20260919):
+    """Fit log E = beta0 + beta_N log N + beta_reg log d_reg.
+
+    beta_N is estimated, never fixed at -1/2. Bootstrap resamples parameter
+    replicates, preserving all N values for each sampled replicate.
+    """
+    rr = _finite(rows, part, "constructive")
+    if len(rr) < 4:
+        return None
+    X = np.array([[1.0, np.log(float(r["N"])),
+                   np.log(max(float(r["regularity_margin"]), 1e-14))]
+                  for r in rr])
+    y = np.log(np.array([float(r["error"]) for r in rr]))
+    beta = np.linalg.lstsq(X, y, rcond=None)[0]
+
+    rng = np.random.default_rng(seed)
+    reps = sorted({int(r["replicate"]) for r in rr})
+    b = []
+    for _ in range(boot_reps):
+        sampled = rng.choice(reps, size=len(reps), replace=True)
+        rrb = []
+        for j in sampled:
+            rrb.extend([r for r in rr if int(r["replicate"]) == j])
+        Xb = np.array([[1.0, np.log(float(r["N"])),
+                        np.log(max(float(r["regularity_margin"]), 1e-14))]
+                       for r in rrb])
+        yb = np.log(np.array([float(r["error"]) for r in rrb]))
+        if np.linalg.matrix_rank(Xb) == 3:
+            b.append(np.linalg.lstsq(Xb, yb, rcond=None)[0])
+    b = np.asarray(b)
+    lo = np.quantile(b, .025, axis=0) if len(b) else np.full(3, np.nan)
+    hi = np.quantile(b, .975, axis=0) if len(b) else np.full(3, np.nan)
+    return beta, lo, hi
+
+
+def summarize_rows(rows, outdir, restart_grid):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    methods = ["constructive", "mle_random", "mle_constructive"]
     parts = ["22", "4"]
+    maxk = max(restart_grid)
+    main_methods = ["constructive", "mle_constructive", f"mle_random_k{maxk}"]
 
-    # Error vs N
+    # Error vs N.
     fig, axes = plt.subplots(1, 2, figsize=(8.0, 3.1), sharey=True)
     for ax, part in zip(axes, parts):
-        for method in methods:
+        for method in main_methods:
             xs, med, lo, hi = [], [], [], []
             for N in sorted({int(r["N"]) for r in rows if r["partition"] == part}):
                 vals = np.array([float(r["error"]) for r in rows
                                  if r["partition"] == part and r["method"] == method
-                                 and int(r["N"]) == N and r["error"] != "nan"], dtype=float)
+                                 and int(r["N"]) == N and np.isfinite(float(r["error"]))])
                 if len(vals) == 0:
                     continue
-                xs.append(N)
-                med.append(np.median(vals))
-                lo.append(np.quantile(vals, 0.1))
-                hi.append(np.quantile(vals, 0.9))
+                xs.append(N); med.append(np.median(vals))
+                lo.append(np.quantile(vals, .1)); hi.append(np.quantile(vals, .9))
             if xs:
                 ax.plot(xs, med, marker="o", label=method)
-                ax.fill_between(xs, lo, hi, alpha=0.15)
+                ax.fill_between(xs, lo, hi, alpha=.15)
         ax.set_xscale("log"); ax.set_yscale("log")
         ax.set_xlabel("sample size N")
         ax.set_title("(2,2)" if part == "22" else "(4)")
@@ -512,24 +642,77 @@ def summarize_rows(rows, outdir):
     fig.savefig(outdir / "finite_sample_vs_N.png", dpi=180)
     plt.close(fig)
 
-    # Error vs regularity margin, constructive method.
+    # Lead conditioning display: sqrt(N)*E versus frozen regularity margin.
     fig, axes = plt.subplots(1, 2, figsize=(8.0, 3.1), sharey=True)
+    sc = None
     for ax, part in zip(axes, parts):
-        rr = [r for r in rows if r["partition"] == part and r["method"] == "constructive"
-              and r["error"] != "nan"]
+        rr = _finite(rows, part, "constructive")
         if rr:
             x = np.array([float(r["regularity_margin"]) for r in rr])
-            y = np.array([float(r["error"]) for r in rr])
+            y = np.array([np.sqrt(float(r["N"])) * float(r["error"]) for r in rr])
             n = np.array([int(r["N"]) for r in rr])
-            sc = ax.scatter(x, y, c=np.log10(n), s=16, alpha=0.65)
+            sc = ax.scatter(x, y, c=np.log10(n), s=16, alpha=.65)
             ax.set_xscale("log"); ax.set_yscale("log")
-            ax.set_xlabel("regularity margin (numerical proxy)")
+            ax.set_xlabel("frozen regularity margin")
             ax.set_title("(2,2)" if part == "22" else "(4)")
-    axes[0].set_ylabel("constructive max parameter error")
-    fig.colorbar(sc, ax=axes, label="log10 N")
-    fig.savefig(outdir / "finite_sample_vs_regularity.pdf", bbox_inches="tight")
-    fig.savefig(outdir / "finite_sample_vs_regularity.png", dpi=180, bbox_inches="tight")
+    axes[0].set_ylabel(r"$\sqrt{N}$ × max parameter error")
+    if sc is not None:
+        fig.colorbar(sc, ax=axes, label="log10 N")
+    fig.savefig(outdir / "finite_sample_scaled_vs_regularity.pdf", bbox_inches="tight")
+    fig.savefig(outdir / "finite_sample_scaled_vs_regularity.png", dpi=180, bbox_inches="tight")
     plt.close(fig)
+
+    # Restart curve: random-start MLE as a function of K.
+    fig, axes = plt.subplots(1, 2, figsize=(8.0, 3.1), sharey=True)
+    equivalence = []
+    for ax, part in zip(axes, parts):
+        Ns = sorted({int(r["N"]) for r in rows if r["partition"] == part})
+        for N in Ns:
+            init_vals = np.array([float(r["error"]) for r in rows
+                                  if r["partition"] == part and r["method"] == "mle_constructive"
+                                  and int(r["N"]) == N and np.isfinite(float(r["error"]))])
+            target = np.median(init_vals) if len(init_vals) else np.nan
+            meds = []
+            for k in restart_grid:
+                vals = np.array([float(r["error"]) for r in rows
+                                 if r["partition"] == part and r["method"] == f"mle_random_k{k}"
+                                 and int(r["N"]) == N and np.isfinite(float(r["error"]))])
+                meds.append(np.median(vals) if len(vals) else np.nan)
+            ax.plot(restart_grid, meds, marker="o", label=f"N={N:g}")
+            eq = next((k for k, m in zip(restart_grid, meds)
+                       if np.isfinite(target) and np.isfinite(m) and m <= 1.05 * target), None)
+            equivalence.append(dict(partition=part, N=N, restart_equivalence_5pct=eq or ">" + str(maxk)))
+        ax.set_xscale("log", base=2); ax.set_yscale("log")
+        ax.set_xlabel("random restart budget K")
+        ax.set_title("(2,2)" if part == "22" else "(4)")
+    axes[0].set_ylabel("median max parameter error")
+    axes[1].legend(fontsize=6)
+    fig.tight_layout()
+    fig.savefig(outdir / "mle_restart_curve.pdf")
+    fig.savefig(outdir / "mle_restart_curve.png", dpi=180)
+    plt.close(fig)
+
+    with (outdir / "mle_restart_equivalence.csv").open("w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(equivalence[0].keys()))
+        w.writeheader(); w.writerows(equivalence)
+
+    # Scaling regression with beta_N estimated, not fixed.
+    reg_rows = []
+    for part in parts:
+        out = _scaling_regression(rows, part)
+        if out is None:
+            continue
+        beta, lo, hi = out
+        reg_rows.append(dict(
+            partition=part,
+            beta0=beta[0], beta0_lo=lo[0], beta0_hi=hi[0],
+            beta_N=beta[1], beta_N_lo=lo[1], beta_N_hi=hi[1],
+            beta_reg=beta[2], beta_reg_lo=lo[2], beta_reg_hi=hi[2],
+        ))
+    if reg_rows:
+        with (outdir / "scaling_regression.csv").open("w", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=list(reg_rows[0].keys()))
+            w.writeheader(); w.writerows(reg_rows)
 
 
 def run(args):
@@ -558,31 +741,37 @@ def run(args):
                                  seconds=t_constructive))
 
                 t0 = time.perf_counter()
-                mler = fit_mle(counts, part, args.random_starts, rng, init=None, maxiter=args.maxiter)
-                rows.append(dict(partition=part, N=N, replicate=rep, method="mle_random",
-                                 error=errfun(mler, truth), regularity_margin=reg,
-                                 seconds=time.perf_counter() - t0))
-
-                t0 = time.perf_counter()
                 if constructive is None:
                     mlec = None
                 else:
-                    mlec = fit_mle(counts, part, max(1, args.constructive_starts), rng,
-                                   init=constructive, maxiter=args.maxiter)
+                    mlec = fit_mle(counts, part, 1, rng, init=constructive, maxiter=args.maxiter)
+                init_seconds = time.perf_counter() - t0
                 rows.append(dict(partition=part, N=N, replicate=rep, method="mle_constructive",
                                  error=errfun(mlec, truth), regularity_margin=reg,
-                                 seconds=time.perf_counter() - t0))
+                                 seconds=init_seconds))
 
+                t0 = time.perf_counter()
+                curve = fit_mle_restart_curve(counts, part, args.restart_grid, rng,
+                                              maxiter=args.maxiter)
+                random_seconds = time.perf_counter() - t0
+                for k in args.restart_grid:
+                    estk = curve[k]
+                    rows.append(dict(partition=part, N=N, replicate=rep,
+                                     method=f"mle_random_k{k}",
+                                     error=errfun(estk, truth), regularity_margin=reg,
+                                     seconds=random_seconds))
+
+                kmax = max(args.restart_grid)
                 print(f"part={part:>2} rep={rep:03d} N={N:>8} "
                       f"constructive={errfun(constructive, truth):.3e} "
-                      f"mle-random={errfun(mler, truth):.3e} "
+                      f"mle-random-k{kmax}={errfun(curve[kmax], truth):.3e} "
                       f"mle-init={errfun(mlec, truth):.3e} margin={reg:.2e}")
 
     csv_path = outdir / "finite_sample.csv"
     with csv_path.open("w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
         w.writeheader(); w.writerows(rows)
-    summarize_rows(rows, outdir)
+    summarize_rows(rows, outdir, args.restart_grid)
     print("wrote", csv_path)
     return 0
 
@@ -591,10 +780,8 @@ def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--ns", type=int, nargs="+", default=[1000, 10000, 100000, 1000000])
     p.add_argument("--replicates", type=int, default=20)
-    p.add_argument("--random-starts", type=int, default=4,
-                   help="number of random MLE starts")
-    p.add_argument("--constructive-starts", type=int, default=2,
-                   help="total MLE starts when the first is the constructive estimate")
+    p.add_argument("--restart-grid", type=int, nargs="+", default=[1, 2, 4, 8, 16],
+                   help="cumulative random-start MLE budgets to compare")
     p.add_argument("--maxiter", type=int, default=1200)
     p.add_argument("--pseudocount", type=float, default=0.5)
     p.add_argument("--seed", type=int, default=20260919)
@@ -604,8 +791,7 @@ def parse_args():
     if a.quick:
         a.ns = [1000, 10000]
         a.replicates = 2
-        a.random_starts = 2
-        a.constructive_starts = 1
+        a.restart_grid = [1, 2]
         a.maxiter = 400
     return a
 
