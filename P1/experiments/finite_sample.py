@@ -410,6 +410,69 @@ def error4(est, truth):
     ))
 
 
+def acceptance_probs22(t):
+    mask=np.zeros((4,4),dtype=bool)
+    for i,a in enumerate(tt.S):
+        for j,b in enumerate(tt.S):
+            mask[i,j]=(sum(x==1 for x in a+b)>=3)
+    qA,qB,eta=t["qA"],t["qB"],t["eta"]
+    out=[]
+    for h in range(2):
+        P=np.outer(tt.block_law(qA[h],eta[0],"ds"),
+                   tt.block_law(qB[h],eta[1],"ds"))
+        out.append(float(P[mask].sum()))
+    Ap=np.outer(tt.block_law(None,eta[0],"A+"),
+                tt.block_law(None,eta[1],"A+"))
+    Am=np.outer(tt.block_law(None,eta[0],"A-"),
+                tt.block_law(None,eta[1],"A-"))
+    return out[0],out[1],float(Ap[mask].sum()),float(Am[mask].sum())
+
+
+def acceptance_probs4(t):
+    eta=float(t["eta"])
+    vals=[[],[]]
+    for h in range(2):
+        ps=[]
+        for x in fi.CELLS:
+            pro=np.prod([t["q"][h][i] if x[i]==1 else 1-t["q"][h][i] for i in range(4)])
+            prof=np.prod([1-t["q"][h][i] if x[i]==1 else t["q"][h][i] for i in range(4)])
+            p=(1-eta)*pro+eta*prof
+            ps.append(p if sum(v==1 for v in x)>=3 else 0.0)
+        vals[h]=sum(ps)
+    aplus=1-eta
+    aminus=eta
+    return float(vals[0]),float(vals[1]),float(aplus),float(aminus)
+
+
+def precision_functional(t,partition,gamma_plus=.30,gamma_minus=.30):
+    if partition=="22":
+        cplus,cminus,Splus,Sminus=np.asarray(t["w"],float)
+        a_dp,a_dm,a_ap,a_am=acceptance_probs22(t)
+    else:
+        cplus,cminus=np.asarray(t["c"],float)
+        Splus,Sminus=np.asarray(t["S"],float)
+        a_dp,a_dm,a_ap,a_am=acceptance_probs4(t)
+    denom=cplus*a_dp+cminus*a_dm+Splus*a_ap+Sminus*a_am
+    if denom<=0:
+        return np.nan
+    tp=(cplus*a_dp
+        +(1-gamma_plus)*Splus*a_ap
+        +gamma_minus*Sminus*a_am)
+    return float(tp/denom)
+
+
+def splus_value(t,partition):
+    return float(t["w"][2] if partition=="22" else t["S"][0])
+
+
+def downstream_errors(est,truth,partition):
+    if est is None:
+        return np.nan,np.nan
+    se=abs(splus_value(est,partition)-splus_value(truth,partition))
+    pe=abs(precision_functional(est,partition)-precision_functional(truth,partition))
+    return float(se),float(pe)
+
+
 def fit_quality(est, truth_p, counts, partition):
     """Return multinomial NLL and TV error for an estimated parameter."""
     if est is None:
@@ -619,6 +682,47 @@ def _scaling_regression(rows, part, boot_reps=1000, seed=20260919):
     return beta, lo, hi
 
 
+def _scaling_by_regularity_bins(rows,part,boot_reps=1000,seed=20260919):
+    rr=_finite(rows,part,"constructive")
+    if len(rr)<8:
+        return []
+    by_rep={}
+    for r in rr:
+        by_rep.setdefault(int(r["replicate"]),float(r["regularity_margin"]))
+    reps=np.array(sorted(by_rep))
+    margins=np.array([by_rep[j] for j in reps])
+    cuts=np.quantile(margins,[.25,.50,.75])
+    bin_of={j:int(np.searchsorted(cuts,by_rep[j],side="right")) for j in reps}
+    out=[]
+    rng=np.random.default_rng(seed)
+    for b in range(4):
+        rb=[r for r in rr if bin_of[int(r["replicate"])]==b]
+        breps=sorted({int(r["replicate"]) for r in rb})
+        if len(breps)<2:
+            continue
+        X=np.array([[1.0,np.log(float(r["N"]))] for r in rb])
+        y=np.log(np.array([float(r["error"]) for r in rb]))
+        beta=np.linalg.lstsq(X,y,rcond=None)[0]
+        boots=[]
+        for _ in range(boot_reps):
+            samp=rng.choice(breps,size=len(breps),replace=True)
+            rbb=[]
+            for j in samp:
+                rbb.extend([r for r in rb if int(r["replicate"])==j])
+            Xb=np.array([[1.0,np.log(float(r["N"]))] for r in rbb])
+            yb=np.log(np.array([float(r["error"]) for r in rbb]))
+            if np.linalg.matrix_rank(Xb)==2:
+                boots.append(np.linalg.lstsq(Xb,yb,rcond=None)[0][1])
+        lo,hi=(np.quantile(boots,[.025,.975]) if boots else (np.nan,np.nan))
+        lower=-np.inf if b==0 else cuts[b-1]
+        upper=np.inf if b==3 else cuts[b]
+        out.append(dict(partition=part,regularity_bin=f"Q{b+1}",
+                        margin_lower=lower,margin_upper=upper,
+                        n_parameter_draws=len(breps),
+                        beta_N=beta[1],beta_N_lo=lo,beta_N_hi=hi))
+    return out
+
+
 def summarize_rows(rows, outdir, restart_grid):
     import matplotlib
     matplotlib.use("Agg")
@@ -708,6 +812,38 @@ def summarize_rows(rows, outdir, restart_grid):
         w = csv.DictWriter(f, fieldnames=list(equivalence[0].keys()))
         w.writeheader(); w.writerows(equivalence)
 
+    # Downstream functionals for the constructive estimator.
+    fig,axes=plt.subplots(2,2,figsize=(8.0,5.4),sharex="col")
+    for col,part in enumerate(parts):
+        rr=_finite(rows,part,"constructive")
+        Ns=sorted({int(r["N"]) for r in rr})
+        for row_i,key in enumerate(["splus_error","precision_error"]):
+            med=[]; lo=[]; hi=[]
+            for N in Ns:
+                vals=np.array([float(r[key]) for r in rr if int(r["N"])==N
+                               and np.isfinite(float(r[key]))])
+                med.append(np.median(vals)); lo.append(np.quantile(vals,.1)); hi.append(np.quantile(vals,.9))
+            axes[row_i,col].plot(Ns,med,marker="o")
+            axes[row_i,col].fill_between(Ns,lo,hi,alpha=.15)
+            axes[row_i,col].set_xscale("log"); axes[row_i,col].set_yscale("log")
+        axes[0,col].set_title("(2,2)" if part=="22" else "(4)")
+        axes[1,col].set_xlabel("sample size N")
+    axes[0,0].set_ylabel(r"$|\hat S_+-S_+|$")
+    axes[1,0].set_ylabel("accepted-precision error")
+    fig.tight_layout()
+    fig.savefig(outdir/"finite_sample_downstream_vs_N.pdf")
+    fig.savefig(outdir/"finite_sample_downstream_vs_N.png",dpi=180)
+    plt.close(fig)
+
+    # Main N-slope analysis by preregistered regularity quartile.
+    bin_rows=[]
+    for part in parts:
+        bin_rows.extend(_scaling_by_regularity_bins(rows,part))
+    if bin_rows:
+        with (outdir/"scaling_by_regularity_bin.csv").open("w",newline="") as f:
+            w=csv.DictWriter(f,fieldnames=list(bin_rows[0].keys()))
+            w.writeheader(); w.writerows(bin_rows)
+
     # Scaling regression with beta_N estimated, not fixed.
     reg_rows = []
     for part in parts:
@@ -749,8 +885,10 @@ def run(args):
 
                 errfun = error22 if part == "22" else error4
                 nll_c, tv_c = fit_quality(constructive, p, counts, part)
+                sp_c, pr_c = downstream_errors(constructive, truth, part)
                 rows.append(dict(partition=part, N=N, replicate=rep, method="constructive",
                                  error=errfun(constructive, truth), regularity_margin=reg,
+                                 splus_error=sp_c, precision_error=pr_c,
                                  nll=nll_c, tv=tv_c, failed=int(constructive is None),
                                  seconds=t_constructive))
 
@@ -761,8 +899,10 @@ def run(args):
                     mlec = fit_mle(counts, part, 1, rng, init=constructive, maxiter=args.maxiter)
                 init_seconds = time.perf_counter() - t0
                 nll_i, tv_i = fit_quality(mlec, p, counts, part)
+                sp_i, pr_i = downstream_errors(mlec, truth, part)
                 rows.append(dict(partition=part, N=N, replicate=rep, method="mle_constructive",
                                  error=errfun(mlec, truth), regularity_margin=reg,
+                                 splus_error=sp_i, precision_error=pr_i,
                                  nll=nll_i, tv=tv_i, failed=int(mlec is None),
                                  seconds=init_seconds))
 
@@ -773,9 +913,11 @@ def run(args):
                 for k in args.restart_grid:
                     estk = curve[k]
                     nll_k, tv_k = fit_quality(estk, p, counts, part)
+                    sp_k, pr_k = downstream_errors(estk, truth, part)
                     rows.append(dict(partition=part, N=N, replicate=rep,
                                      method=f"mle_random_k{k}",
                                      error=errfun(estk, truth), regularity_margin=reg,
+                                     splus_error=sp_k, precision_error=pr_k,
                                      nll=nll_k, tv=tv_k, failed=int(estk is None),
                                      seconds=random_seconds))
 
