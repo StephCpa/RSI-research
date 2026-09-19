@@ -1,0 +1,40 @@
+{
+  "protocol_version": "audit_prereg_v0_1",
+  "benchmark": {
+    "name": null,
+    "version_or_commit": null,
+    "problem_manifest": null,
+    "visible_suite_definition": null,
+    "gold_suite_definition": null
+  },
+  "candidate_generation": {
+    "model_ids": [],
+    "samples_per_problem": null,
+    "temperature": null,
+    "top_p": null,
+    "max_tokens": null,
+    "seed": 20260919
+  },
+  "judges": [
+    {
+      "label": "judge_A",
+      "model_id": null,
+      "provider": null
+    },
+    {
+      "label": "judge_B",
+      "model_id": null,
+      "provider": null
+    }
+  ],
+  "prompts": {
+    "identity": null,
+    "order_swap": null,
+    "negation": null
+  },
+  "metamorphic_manifest": null,
+  "candidate_budget": null,
+  "unanimous_target": 1000,
+  "kill_threshold_false_accept_rate": 0.005,
+  "audit_budgets": [25, 50, 100, 200, 500, 1000]
+}
