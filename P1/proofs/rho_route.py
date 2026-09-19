@@ -2,7 +2,7 @@
 # system (a - rho b) x (c - rho d) = 0, then the two component rays as roots of A - rho B.
 # Also: do the spurious quartic roots survive positivity + orientation?
 import itertools, numpy as np
-exec(open('threeone.py').read().split("ok=0; trials=50")[0])   # PATS3, N3, blockA, full_law, sk_dk, H, invert3
+from threeone import PATS3, N3, blockA, full_law, sk_dk, H, invert3
 
 def lin_funcs(L):
     """s_k, d_k as linear forms on (lambda, mu); returns 3x2 arrays."""
