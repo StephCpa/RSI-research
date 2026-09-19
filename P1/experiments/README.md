@@ -58,3 +58,18 @@ make audit-freeze
 The freeze command writes `audit_config.lock.json` with SHA-256 hashes of the
 configuration and referenced prompt/manifest files. Commit that lock file
 before generating candidates or inspecting hidden-suite outcomes.
+
+
+## 4. Analyze a frozen audit table
+
+The analysis stage is provider-agnostic. Prepare a CSV following
+`audit_schema_example.csv` and run:
+
+```bash
+python P1/experiments/audit_analysis.py path/to/audit_table.csv
+```
+
+This produces the three preregistered panels: blind error in the unanimous
+stratum, agreement-only blind-mass identified set versus the audited interval,
+and interval width versus gold budget for unanimous, uniform, and
+disagreement-only allocation.
