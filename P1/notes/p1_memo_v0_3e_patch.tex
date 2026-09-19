@@ -1,0 +1,111 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs,enumitem,array}
+\usepackage[hidelinks]{hyperref}
+\usepackage[expansion=false]{microtype}
+\setlist{nosep,leftmargin=1.5em}
+
+\newtheorem{theorem}{Theorem}
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+\newcommand{\status}[1]{\hfill{\normalfont\small\textsc{[#1]}}}
+\newcommand{\one}{\mathbf{1}}
+\newcommand{\Wt}{\widetilde{W}}
+
+\title{\textbf{v0.3e patch}\\[2pt]
+\large Hardened certificate, the symmetric non-identification statement,\\ and the wording for the scans}
+\author{18 September 2026}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-2.5em}
+
+All three points are adopted. The certificate is now a standalone artifact with two independent interval implementations; the theorem is stated symmetrically in $S_+$ and $S_-$; and the scan numbers are demoted to exploratory appendix material.
+
+%======================================================================
+\section*{1. The certificate is now standalone}
+
+\texttt{certify\_standalone.py} contains no search, no random seed, no saved file, and no SciPy. It hardcodes the rational $\theta_1$, the 32-digit rational box center $y$, and the radius $10^{-6}$, recomputes the exact target $p=F(\theta_1)$ with \texttt{Fraction} arithmetic, and checks:
+\begin{enumerate}[label=(C\arabic*)]
+\item $\theta_1$ strictly inside the domain \hfill exact rational
+\item $\det J(\theta_1)=-\tfrac{49846858308155727}{655360000000000000000000000000000000}\neq0$ \hfill exact rational
+\item every point of $X=y\pm10^{-6}$ inside the domain \hfill exact rational
+\item $\|\theta_1-y\|_\infty>10^{-6}$; the script prints the exact rational, $\approx0.0814612705830218$ \hfill exact rational
+\item $K(X)\subset\operatorname{int}X$ and $\|I-YJ(X)\|_\infty<1$ \hfill interval
+\end{enumerate}
+No certificate predicate is evaluated in floating point: the comparisons are between exact rationals or between interval endpoints. The approximate inverse $Y$ is recomputed deterministically from $y$ and rationalized, so it carries no hidden dependence on the discovery run; only $\|I-YJ(X)\|_\infty<1$ matters, and any fixed $Y$ that achieves it would do.
+
+(C5) runs twice, in two independent interval implementations:
+\begin{center}\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Implementation & $K(X)\subset\operatorname{int}X$ & $\|I-YJ(X)\|_\infty$ bound\\
+\midrule
+\texttt{mpmath.iv} (40 dps) & true & $0.0516621376815982$\\
+Arb balls via \texttt{python-flint} (200 bits) & true & $0.0514087152550928\pm3.7\times10^{-61}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+Arb's comparison operators are rigorous, so the inclusion test and $\|I-YJ(X)\|_\infty<1$ are decided inside ball arithmetic. The two bounds differ in the third significant figure because the implementations round the enclosure differently; both are far below 1, and the inclusion margin is $5.2\times10^{-8}$ against a box radius of $10^{-6}$.
+
+The discovery scripts (\texttt{witness.py}, \texttt{scan2.py}) stay in the appendix as provenance, clearly separated from the artifact. Nothing in the proof depends on \texttt{roots[0]} having been the second root.
+
+%======================================================================
+\section*{2. The symmetric statement}
+
+\begin{theorem}[identification phase transition]
+For the relation-corrupted model with $n$ conditionally independent views:
+\[
+\boxed{\begin{array}{ll}
+n\le3 &: \text{not locally identifiable, by dimension;}\\[1mm]
+n=4 &: \text{generically locally identifiable, globally ambiguous on a nonempty open set;}\\[1mm]
+n\ge5 &: \text{the aggregate model is generically globally identifiable;}\\[1mm]
+\text{all }n &: (E^+,B^+)\ \text{and}\ (E^-,B^-)\ \text{remain internally non-identified.}
+\end{array}}
+\]
+\end{theorem}
+
+The fourth line is symmetric because the argument is: in the exact model $E^+$ and $B^+$ both have $W^\star\equiv+\one$, while $E^-$ and $B^-$ both have $W^\star\equiv-\one$; each pair is carried to a single product component by the nondifferential relation channel. So $S_+=\lambda_{E+}+\lambda_{B+}$ and $S_-=\lambda_{E-}+\lambda_{B-}$ are identified and neither splits. The blind-false-\emph{reject} pair is the mirror image of the blind-false-accept pair and costs nothing extra to state.
+
+\begin{remark}
+Because the paper is about false acceptance, say once after the theorem that subsequent sections work with $S_+$, and leave $S_-$ as the recorded symmetric case. A reader who wants the false-reject analysis then knows it exists and is identical.
+\end{remark}
+
+%======================================================================
+\section*{3. Wording for the numerical scans}
+
+Replace ``roughly half of random laws'' with a statement about the sampler:
+
+\begin{quote}
+In an exploratory scan, 10 of 20 targets generated from our parameter sampler yielded multiple feasible roots, and the search found up to three feasible roots for a single target.
+\end{quote}
+
+The scan draws $\theta\sim P_\Theta$ and sets $q=F(\theta)$, so the frequency is a property of $P_\Theta$ and of the multistart budget, not a volume on the space of laws; and multistart never proves that no further root exists. With the open-set theorem in hand these counts carry no load at all, so they belong in the appendix as intuition for why different targets behave differently.
+
+Likewise the DSA result is a stronger numerical stress test on the corrected feasible region ($c_+=\lambda_0\rho$, $c_-=\lambda_0(1-\rho)$, $c_++c_-<1$), and 0/20 at $n=4$ and $n=5$ does not upgrade v0.1b's Proposition~2 beyond its current status: generic local identifiability, with global uniqueness still unproven. The wording in v0.1b already says exactly that and should not be touched.
+
+Keep ``globally non-identifiable on a nonempty open set'' as the $n=4$ claim. ``Generically non-identifiable'' would require the discriminant and fiber-degree analysis and is not what the witness proves.
+
+%======================================================================
+\section*{4. The $n\ge5$ proof, in the order you suggest}
+
+Write it entirely in the observed parameterization $(w,p_1,p_2,\eta)$ and keep $\alpha^{\pm}$ out until the end:
+\begin{enumerate}
+\item Group the views as $G_1=(W_1,W_2)$, $G_2=(W_3,W_4)$, $G_3=(W_5,\dots,W_n)$, with alphabets $4,4,2^{n-4}$. For $r=4$ classes the generic Kruskal ranks are $4,4,\min(4,2^{n-4})$, so $k_1+k_2+k_3\ge10=2r+2$ for every $n\ge5$, with equality at $n=5$. Kruskal's theorem then gives the four product components and their weights, up to permutation; this is the Allman--Matias--Rhodes route for mixtures of product distributions.
+\item The tie-constrained submodel is not inside the exceptional set: at the rational witness $\det M_{12}=-63/8000$ and $\det M_{34}=-2783/116640$, both nonzero, and a fifth view with four pairwise-distinct component probabilities has Kruskal rank~2. A nonzero value at one point shows the relevant determinants are not identically zero on the submodel, so the condition holds generically there.
+\item Resolve the permutation. Generically exactly one pair satisfies $q_{a,v}+q_{b,v}=1$ for all $v$; that is the atom pair. Orient it by $q_{A^+,v}>1/2>q_{A^-,v}$, and orient the remaining two by $p_{1v}>1/2>p_{2v}$. Any other pairing satisfying the complementarity relation lies in a proper algebraic subset.
+\item Read off $\eta_v=q_{A^-,v}$, $p_{1v}$, $p_{2v}$ and the four weights, which include $S_+$ and $S_-$.
+\item \emph{Corollary}, not part of the identification argument: $\alpha^+_v=\tfrac12+(p_{1v}-\tfrac12)/(1-2\eta_v)$ and $\alpha^-_v=\tfrac12+(\tfrac12-p_{2v})/(1-2\eta_v)$.
+\end{enumerate}
+Stating step~5 as a corollary keeps the theorem about the observed law and makes clear that the inversion needs $\eta_v\neq1/2$, which the domain already guarantees.
+
+%======================================================================
+\section*{5. What P1's conclusion now says}
+
+Your one-sentence version is the right headline, and it is worth putting in the abstract almost verbatim: enough independent views eventually identify the entire latent measurement system, but no number of views identifies truth components that are observationally equivalent by construction. Redundancy identifies the apparatus; it cannot identify a distinction the measurement relation does not encode. That is the three-plate intuition stated as an identification theorem, and the gold-audit rule of Lemma~3 is what remains once it is accepted.
+
+Deferring the generic fiber degree is right. It refines the middle line of the phase transition and explains the varying feasible-root counts, but the transition itself no longer depends on it.
+\end{document}
