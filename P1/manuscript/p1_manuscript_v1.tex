@@ -163,7 +163,7 @@ Assume the non-atomic component in \eqref{eq:dsa} is known. For a gate that acce
 \qquad
 r=P(Y=-1\mid W=+\one).
 \]
-Gold labels sampled outside $U^+$ do not identify $r$. If $n$ labels are sampled uniformly from $U^+$ and $k$ are false accepts, an exact binomial upper confidence bound on $r$ yields a corresponding bound on $\FA$.
+Gold labels sampled outside $U^+$ do not identify $r$. If $n$ labels are sampled uniformly from $U^+$ and $k$ are false accepts, an exact Clopper--Pearson binomial upper confidence bound on $r$ yields a corresponding bound on $\FA$ \cite{clopper1934}.
 \end{lemma}
 
 The operational consequence is counterintuitive: if blind false accepts are the target, routing only \emph{disagreements} to human review spends gold labels on errors already visible to the scheme. A practical design oversamples unanimous, transformation-consistent accepts and keeps a smaller allocation elsewhere for checking the measurement model itself.
