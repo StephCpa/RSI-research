@@ -1,0 +1,484 @@
+\documentclass[11pt]{article}
+\usepackage[margin=0.92in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{booktabs,graphicx,enumitem,array,microtype}
+\usepackage[hidelinks]{hyperref}
+\setlist{nosep,leftmargin=1.5em}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+\newcommand{\one}{\mathbf{1}}
+\newcommand{\Ztwo}{\mathbb{Z}_2}
+\newcommand{\cV}{\mathcal{V}}
+\newcommand{\cT}{\mathcal{T}}
+\newcommand{\cX}{\mathcal{X}}
+\newcommand{\Up}{U^+}
+\newcommand{\FA}{\mathrm{FA}}
+\newcommand{\Prec}{\mathrm{Prec}}
+\newcommand{\iid}{\mathrm{iid}}
+
+\title{\textbf{Self-Calibration of AI Verifiers:}\\[2pt]
+\large Identifiability under Shared Blind Spots and Correlated Checks}
+\author{Working manuscript -- merged theory draft v1.0}
+\date{19 September 2026}
+
+\begin{document}
+\maketitle
+\vspace{-1.6em}
+
+\begin{abstract}
+Self-improving AI systems increasingly use model-based verifiers, critics, tests, and transformed re-evaluations to decide which proposed changes to accept. Agreement among such checks is informative about idiosyncratic errors but cannot, by itself, reveal errors shared by every check. We develop a self-calibration view of this problem. Designed transformations with known effects on truth create normalized views, and their disagreements reveal only error modes that transform differently from the truth. This yields a sharp observational non-identification: easy correct accepts and blind false accepts are indistinguishable from verifier outputs alone, so a small gold audit should be concentrated where every check agrees.
+
+We then model imperfect transformation relations. A relation error is shared by all verifier views that use the same check, inducing block-correlated observations rather than independent label noise. The resulting model has a universal $\Ztwo$ gauge symmetry. At the minimally informative four-view boundary, the block structure creates an identification phase transition. With four singleton relation-error blocks the aggregate model is generically locally identifiable but has certified global ambiguity on a nonempty open set. In contrast, every coarser four-view block partition is generically globally identifiable in the same-sign, better-than-random sector under explicit regularity conditions. The proofs use four different self-calibration mechanisms: structural-zero low-rank completion, a common-noise polynomial invariant, complement-pair flattening minors, and saturated elimination. Thus correlation among measurement errors can improve global identifiability when it creates exploitable structural zeros. We close with gold-audit design, transformation selection, and the link from static identifiability to recursive self-improvement dynamics.
+\end{abstract}
+
+%======================================================================
+\section{Introduction}
+
+Recursive self-improvement (RSI) is usually described as an optimization problem: a system proposes changes to itself, evaluates them, accepts the promising ones, and repeats. This description hides a measurement problem. If the proposer and the evaluator are built from related models, trained on related data, or exposed to the same transformed task, then agreement can be caused either by correctness or by shared error. A self-improvement loop can optimize its own measurement process long before it knows whether it has improved in truth.
+
+The motivating analogy is precision metrology. Precision engineering does not require every measuring device to be more accurate than the object being built. Reversal, redundancy, error separation, and self-calibration can identify some systematic errors without a superior external artifact \cite{donaldson1972,evans1996}. The important question is not ``how accurate is the reference?'' but ``which error modes are observable under the available comparisons?'' The same distinction matters for AI verifiers. Adding more copies of the same judge can remove independent noise while leaving a common-mode error untouched. By contrast, a transformation under which the truth changes differently from the shared error can expose it.
+
+This paper asks one question:
+\begin{quote}
+\emph{How much can a self-improving system know, from its own checks, about whether it has truly improved?}
+\end{quote}
+We answer it at three levels. First, we isolate the observational equivalence that no amount of verifier agreement can break. Second, we study how imperfect transformations and shared relation errors change the latent measurement model. Third, we show that the correlation structure of those errors can itself create identifying information.
+
+\paragraph{Contributions.}
+\begin{enumerate}
+\item We formalize \emph{normalized views}: verifier outputs under transformations whose effect on truth is known. Disagreement reveals at least one error, while unanimous wrong answers form a blind set. The easy-correct/blind-wrong split is not identified from view agreement alone.
+\item We show that label-independent transformation corruption preserves this non-identification. With multiple verifiers per check, the relation error is a block-level latent variable, so the realistic model is a relation-corrupted latent-class model rather than an independent-noise Dawid--Skene model.
+\item We prove a universal $\Ztwo$ gauge symmetry of the corrupted model. The usual restriction $\eta_\tau<1/2$ selects a gauge representative only for one check; with several checks it additionally selects a substantive same-sign reliability sector.
+\item For singleton relation-error blocks we obtain a $3/4/5$ identification transition: at most three views are dimensionally insufficient; four views are generically locally identifiable but globally ambiguous on a nonempty open set; five or more are generically globally identifiable for the aggregate model.
+\item At $n=4$, block correlation changes the answer. In the same-sign sector, every coarser partition $(2,1,1)$, $(2,2)$, $(3,1)$, and $(4)$ is generically globally identifiable under explicit regularity conditions, while $(1,1,1,1)$ retains additional open-set aliasing. The mechanisms differ by partition but all exploit structure created by shared relation errors.
+\item We derive a gold-audit rule: if the goal is to estimate blind false accepts, labels spent only on disagreements measure errors the scheme already sees. Gold effort should concentrate on unanimous accepts, while retaining a small allocation elsewhere for model checking.
+\end{enumerate}
+
+The main conceptual conclusion is that correlated verifier errors are not only a nuisance. When they induce structured zeros or shared invariances, they can make the latent measurement system \emph{more} globally identifiable than a fully independent corruption model.
+
+%======================================================================
+\section{Setup: transformations, normalized views, and blind sets}
+\label{sec:setup}
+
+At generation $t$, a loop proposes candidates $x\in\cX$ from a distribution $q_t$. Suppress $t$ until Section~\ref{sec:dynamics}. Each candidate has a binary truth label $Y(x)\in\{-1,+1\}$, where $+1$ means genuinely correct or genuinely improved. Verifiers $V_1,\ldots,V_m$ output $\pm1$.
+
+A check is a transformation $\tau:\cX\to\cX$ with a known label relation $s_\tau\in\{-1,+1\}$ satisfying
+\[
+Y(\tau x)=s_\tau Y(x)
+\]
+on the intended domain. Examples include answer-order reversal, negation, semantics-preserving refactoring, paraphrase, and symmetry transformations. Let $\cT$ contain the identity.
+
+\begin{definition}[Normalized views]
+For a verifier--check pair $v=(j,\tau)$ define
+\[
+W_v(x)=s_\tau V_j(\tau x).
+\]
+All normalized views are therefore expressed relative to the same latent bit $Y(x)$.
+\end{definition}
+
+\begin{lemma}[Consistency]
+If every view is correct on $x$, then $W(x)=Y(x)\one$. Hence a non-constant view vector certifies that at least one view is wrong. A constant vector means either every view is correct or every view is wrong.
+\end{lemma}
+
+Define unanimous strata
+\[
+U^\pm=\{x:W(x)=\pm\one\}.
+\]
+The blind false-accept event is
+\[
+B^+=\{x:Y(x)=-1,\ W(x)=+\one\}.
+\]
+The mirror event $B^-$ contains blind false rejects. These are not simply ``hard items'': they are items on which every available normalized check transforms exactly like the truth.
+
+\begin{lemma}[Monotonicity of the blind set]
+If a view set $\cV$ is enlarged to $\cV'\supseteq\cV$, then $B^+_{\cV'}\subseteq B^+_{\cV}$. The reduction equals the mass of previously blind items on which at least one added view is correct.
+\end{lemma}
+
+\begin{example}[Three metrological analogues]
+An answer-order swap exposes a position-bias mechanism because the truth flips while the bias does not. A logically consistent but wrong belief remains blind under negation because both the truth and the belief flip. A code refactor does not expose a test-suite coverage gap if the same tests are applied afterward; an independent test suite can.
+\end{example}
+
+The last example captures the basic self-calibration principle: more measurements help only when they respond differently to the latent distinction one wants to recover.
+
+%======================================================================
+\section{What agreement cannot identify}
+\label{sec:blind}
+
+The easiest non-identification result does not require a particular noise model.
+
+\begin{proposition}[Transfer non-identification]
+Suppose a model class contains two latent types that induce the same law of normalized views. Then mass can be transferred between those types without changing the observed law. In particular, if an easy correct accept $E^+$ and a blind false accept $B^+$ both satisfy $W=+\one$, then the split
+\[
+(\lambda_{E+},\lambda_{B+})
+\]
+is not identified from the view law. Only the sum
+\[
+S_+=\lambda_{E+}+\lambda_{B+}
+\]
+can be identified when the rest of the model is identified. The same statement holds for $(E^-,B^-)$ and $S_-$.
+\end{proposition}
+
+This is an identification statement, not a claim that the system can never certify correctness. Gold labels, formal checkers, trusted hidden tests, or additional assumptions can separate the types. Agreement data alone cannot.
+
+\subsection{A boundary model for auditing}
+
+For a concrete audit calculation, consider a Dawid--Skene component plus unanimous atoms. Given a regular component $H=0$, views are conditionally independent given $Y$, with class-specific accuracies $\alpha_v^y>1/2$. Add four atoms: easy positives and blind false accepts at $+\one$, and easy negatives and blind false rejects at $-\one$. The observed law has the form
+\begin{equation}
+\label{eq:dsa}
+p(w)=c_+\prod_vP_v(w_v\mid+)+c_-\prod_vP_v(w_v\mid-)
++S_+\mathbf{1}\{w=+\one\}+S_-\mathbf{1}\{w=-\one\}.
+\end{equation}
+
+Within this model the easy/blind split of each unanimous atom is sharp non-identification in the sense of partial identification \cite{manski2003}.
+
+\begin{lemma}[Audit where every check agrees]
+Assume the non-atomic component in \eqref{eq:dsa} is known. For a gate that accepts $+\one$, its false-accept mass decomposes as
+\[
+\FA=\FA_{\mathrm{visible}}+P(U^+)\,r,
+\qquad
+r=P(Y=-1\mid W=+\one).
+\]
+Gold labels sampled outside $U^+$ do not identify $r$. If $n$ labels are sampled uniformly from $U^+$ and $k$ are false accepts, an exact binomial upper confidence bound on $r$ yields a corresponding bound on $\FA$.
+\end{lemma}
+
+The operational consequence is counterintuitive: if blind false accepts are the target, routing only \emph{disagreements} to human review spends gold labels on errors already visible to the scheme. A practical design oversamples unanimous, transformation-consistent accepts and keeps a smaller allocation elsewhere for checking the measurement model itself.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{fig_gate_v02.pdf}
+\caption{Illustrative boundary model. Left: adding independent views reduces ordinary false accepts but approaches a floor set by shared blind mass. Right: agreement alone leaves a wide identified set for accepted-set precision; a targeted gold audit of the unanimous-accept stratum tightens the uncertainty. The audit interval shown is illustrative and treats the non-atomic component as known.}
+\label{fig:gate}
+\end{figure}
+
+%======================================================================
+\section{Imperfect relations create block-correlated views}
+\label{sec:corrupt}
+
+The exact-relation setup is appropriate for formal transformations but not for all natural-language checks. Let $s_\tau^\star(x)$ be the actual label relation and define the relation-error bit
+\[
+E_\tau(x)=\mathbf{1}\{s_\tau^\star(x)\neq s_\tau\},
+\qquad
+\eta_\tau=P(E_\tau=1).
+\]
+Every verifier view using the same check $\tau$ shares this error bit. If $W_{j\tau}^\star$ is the normalized view under the correct relation, the reported view is
+\[
+\widetilde W_{j\tau}=(-1)^{E_\tau}W_{j\tau}^\star.
+\]
+Thus relation error is block-correlated across verifiers attached to one check.
+
+Two consequences are immediate. First, within-block verifier disagreement is unchanged by the common sign flip. Second, marginal view accuracy is attenuated. If a view has true class-specific accuracy $\alpha_{j\tau}^y$ and $E_\tau$ is nondifferential, then
+\[
+\widetilde\alpha_{j\tau}^y
+=\frac12+(1-2\eta_\tau)\left(\alpha_{j\tau}^y-\frac12\right).
+\]
+But the joint reported law is not the product law obtained by simply replacing $\alpha$ with $\widetilde\alpha$: the block flip couples the views.
+
+This motivates the relation-corrupted product model studied below. The latent aggregate components are DS$+$, DS$-$, and two atom-derived components $A^+,A^-$ with masses $S_+,S_-$. The internal easy/blind split inside $A^+$ and $A^-$ remains non-identified by Proposition~1.
+
+\subsection{Block model}
+
+Let the $n$ reported views be partitioned into $T$ relation-error blocks of sizes
+\[
+\pi=(m_1,\ldots,m_T),\qquad \sum_{\tau=1}^Tm_\tau=n.
+\]
+Conditional on DS class $h\in\{+,-\}$, the uncorrupted views are independent Bernoulli signs with probabilities $q_{h,v}=P(W_v^\star=+1\mid h)$. A block relation error $E_\tau$ flips all signs in that block. For $A^+$ the uncorrupted block is all $+$, and for $A^-$ it is all $-$. We orient the DS labels by
+\[
+q_{+,v}>\frac12>q_{-,v}.
+\]
+This labels the two DS components but, as the next lemma shows, does not fix the model's universal gauge.
+
+%======================================================================
+\section{Universal gauge and reliability sectors}
+\label{sec:gauge}
+
+\begin{lemma}[Universal $\Ztwo$ gauge]
+\label{lem:gauge}
+For any block partition, define
+\[
+\eta_\tau^\dagger=1-\eta_\tau,\qquad
+c_+^\dagger=c_-,\quad c_-^\dagger=c_+,
+\]
+\[
+q_{+,v}^\dagger=1-q_{-,v},\qquad q_{-,v}^\dagger=1-q_{+,v},
+\qquad
+S_+^\dagger=S_-,\quad S_-^\dagger=S_+.
+\]
+Then the reported law is unchanged. The map is an involution, so the observation map factors through $\Theta/\Ztwo$.
+\end{lemma}
+\begin{proof}
+For one block write
+\[
+K_\eta(q;x)=(1-\eta)P_q(x)+\eta P_q(-x).
+\]
+Since $P_{1-q}(x)=P_q(-x)$,
+\[
+K_{1-\eta}(1-q;x)=\eta P_q(-x)+(1-\eta)P_q(x)=K_\eta(q;x).
+\]
+Applying this blockwise and swapping the two DS components preserves their mixture. Complementing all block error rates swaps the atom-derived components, which is undone by swapping $S_+$ and $S_-$.\qedhere
+\end{proof}
+
+The DS orientation $q_+>1/2>q_-$ is preserved by the gauge, so orientation cannot remove the mirror branch.
+
+Let
+\[
+r_\tau=1-2\eta_\tau.
+\]
+The gauge acts as $r\mapsto-r$ globally. For $T\ge2$, the relative signs
+\[
+\chi_\tau=\operatorname{sgn}(r_1r_\tau),\qquad \tau=2,\ldots,T,
+\]
+are gauge invariant and label $2^{T-1}$ reliability-sign sectors. We focus on the same-sign sector $\chi_\tau=+1$ for every $\tau$ and choose the section
+\[
+r_1>0,
+\]
+which is equivalent in that sector to the better-than-random chamber
+\[
+0<\eta_\tau<\frac12\quad\forall\tau.
+\]
+For $T=1$ this is pure gauge fixing. For $T\ge2$ selecting the same-sign sector is an additional model restriction. The atom components make these relative-sign sectors statistically substantive: flipping the relation convention for only one block moves the global atom patterns to mixed block patterns not contained in the model class.
+
+Two coordinates used later illustrate the quotient/section distinction. In the $(3,1)$ proof,
+\[
+\rho=(1-2\eta_A)^2
+\]
+is gauge invariant. In the $(4)$ proof, $z=1/(1-2\eta)$ changes sign under the gauge; the restriction $z>1$ selects the positive-reliability representative rather than forming a quotient coordinate.
+
+%======================================================================
+\section{Singleton blocks: a $3/4/5$ identification transition}
+\label{sec:singleton}
+
+First take $T=n$, so every relation error is independent across views. After corruption, the aggregate reported law is a four-component Bernoulli-product mixture: DS$+$, DS$-$, and two atom-derived product components with probabilities $1-\eta_v$ and $\eta_v$. The easy/blind internal split remains invisible.
+
+\begin{theorem}[Singleton-block phase transition]
+\label{thm:singleton}
+For the aggregate singleton-block model, in the same-sign sector and away from proper algebraic exceptional sets:
+\begin{enumerate}
+\item if $n\le3$, the model is not locally identifiable by dimension;
+\item if $n=4$, the model is generically locally identifiable, but is globally non-identifiable on a nonempty open set;
+\item if $n\ge5$, the aggregate model is generically globally identifiable (equivalently, identifiable modulo the universal gauge before choosing the section).
+\end{enumerate}
+For every $n$, the internal splits $(E^+,B^+)$ and $(E^-,B^-)$ remain non-identified from the view law.
+\end{theorem}
+
+\paragraph{Proof sketch.}
+At $n=3$, the aggregate model has 12 parameters but only $2^3-1=7$ independent cell probabilities. At $n=4$, the map has 15 parameters and 15 independent cells. An exact rational witness has a nonsingular Jacobian, proving generic local identifiability. Global uniqueness nevertheless fails: a standalone interval-arithmetic certificate gives two distinct regular interior roots with the same reported law. The inverse function theorem then implies a nonempty open set of laws with at least two feasible preimages.
+
+For $n=5$, group the binary views as $2+2+1$. The four latent components yield generic Kruskal ranks $4,4,2$, satisfying
+\[
+4+4+2=10=2r+2\qquad(r=4).
+\]
+Kruskal's theorem and the Allman--Matias--Rhodes latent-class argument identify the four product components up to permutation \cite{kruskal1977,allman2009}. The complementary atom pair is generically the unique pair whose per-view probabilities sum to one, and the orientation constraints label the remaining components. Additional views preserve identification.
+
+The $n=4$ global ambiguity is not merely the universal gauge: both certified roots can be chosen in the same positive-reliability chamber, so the aliasing survives gauge fixing.
+
+%======================================================================
+\section{Block correlation at the four-view boundary}
+\label{sec:block}
+
+Now keep $n=4$ but allow shared relation errors. The parameter count for partition $\pi=(m_1,\ldots,m_T)$ is
+\[
+d_\pi=3+2n+T=11+T.
+\]
+All five partitions are generically locally identifiable: exact rational Jacobian minors are nonzero for $(1,1,1,1)$, $(2,1,1)$, $(2,2)$, $(3,1)$, and $(4)$. The difference is global.
+
+\subsection{Regularity}
+
+All global results below are statements on an explicit regular subset. We separate the substantive same-sign chamber restriction from algebraic nondegeneracy.
+
+\begin{definition}[Regular oriented parameter]
+A parameter is \emph{oriented-interior} if all aggregate component masses are positive, $q_{+,v}>1/2>q_{-,v}$, and it lies in the same-sign reliability sector. We use the section $r_1>0$.
+A parameter is \emph{regular for partition $\pi$} if, in addition, the finite determinants, discriminants, and subresultants used by the reconstruction for $\pi$ are nonzero.
+\end{definition}
+
+For $(2,2)$ this includes $\det R_{MM}\neq0$, a nondegenerate product quadratic, and nonzero atom-moment denominators. For $(3,1)$ it includes nondegenerate line--model intersection and a degree-one common-$\rho$ gcd. For $(2,1,1)$ it includes $\det\mathcal B\neq0$ and a minimal-degree-two saturated eliminant. For $(4)$ regularity means that \emph{at least one} of the three $2|2$ flattenings has a nondegenerate corner-free-minor certificate, together with nonzero corner-recovery slopes and a nondegenerate rank-2 product decomposition. Each condition is verified nonvacuously by an exact rational witness.
+
+\begin{theorem}[Four-view block classification]
+\label{thm:block}
+At $n=4$, within the same-sign reliability sector and for regular oriented parameters:
+\begin{enumerate}
+\item the fully singleton partition $(1,1,1,1)$ is generically locally identifiable but has certified global ambiguity on a nonempty open set;
+\item every coarser partition $(2,1,1)$, $(2,2)$, $(3,1)$, and $(4)$ is generically globally identifiable modulo the universal $\Ztwo$ gauge;
+\item in the positive-reliability section $0<\eta_\tau<1/2$, every coarser partition is generically globally identifiable.
+\end{enumerate}
+\end{theorem}
+
+The theorem is striking because the coarser models have \emph{more} correlation among reported views. The gain comes from structural constraints created by a shared relation-error bit.
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Partition & Global status at $n=4$ & Identification mechanism\\
+\midrule
+$(1,1,1,1)$ & open-set global aliasing & atom-derived components have full support\\
+$(2,1,1)$ & generic global ID & mixed-block tensor + saturated two-variable elimination\\
+$(2,2)$ & generic global ID & structural zeros + rank-2 completion + atom moments\\
+$(3,1)$ & generic global ID & common-$\rho$ polynomial reconstruction + atom closure\\
+$(4)$ & generic global ID & complement-pair deconvolution + flattening minors\\
+\bottomrule
+\end{tabular}
+\caption{Complete four-view classification in the same-sign sector, under partition-specific regularity.}
+\label{tab:block}
+\end{table}
+
+\subsection{Why correlation helps: structural zeros}
+
+If a block has size at least two, both atom-derived components put zero probability on mixed-sign patterns inside that block. Those cells are therefore atom-free and expose the DS submodel directly. No such cells exist when every block is a singleton: the atom-derived components have full support after independent relation corruption. The four positive cases exploit this structure in different ways.
+
+\paragraph{$(2,2)$: low-rank completion.}
+Each size-two block has mixed states $M=\{+-, -+\}$ and unanimous states $U=\{++,--\}$. In the $4\times4$ table over the two blocks, atom mass is confined to $U\times U$. Hence the DS matrix $R$ is observed on $M\times M$, $M\times U$, and $U\times M$. Since $R$ has rank two,
+\[
+R_{UU}=R_{UM}R_{MM}^{-1}R_{MU}.
+\]
+Subtracting $R$ leaves a $2\times2$ atom table. Its first moments recover the two block flip rates and $S_\pm$. Deconvolving the known relation channels yields an uncorrupted rank-two four-view tensor. A product-quadric equation recovers the two DS component rays; a left inverse then gives their weights and the opposite-side factors.
+
+\paragraph{$(3,1)$: a shared-noise invariant.}
+Restrict the size-three block to its six non-unanimous patterns. The atom components vanish, leaving a $6\times2$ rank-two matrix. Its column space is a projective line $L$. For a point on $L$, let $s_k$ and $d_k$ be the sums and differences of opposite single-minus patterns. Legal size-three DS components satisfy
+\[
+A=\rho B,\qquad C=\rho D,
+\qquad \rho=(1-2\eta_A)^2,
+\]
+for four binary quadratics $A,B,C,D$ on $L$. The common-$\rho$ condition is
+\[
+(\mathbf a-\rho\mathbf b)\times(\mathbf c-\rho\mathbf d)=0.
+\]
+Generically this has a unique $\rho\in(0,1)$; an exact rational witness proves that extra common roots lie on a proper algebraic exceptional set. The two common quadratic roots recover the DS component directions. After correcting their scale, subtracting the DS contribution leaves an atom residual that closes the singleton flip rate and atom masses in closed form.
+
+\paragraph{$(4)$: complement-pair deconvolution.}
+With one size-four block, pair each non-corner pattern $x$ with $-x$. If $z=1/(1-2\eta)$, define
+\[
+T_z(x)=\frac{P(x)+P(-x)+z\{P(x)-P(-x)\}}{2}.
+\]
+At the true $z$, $T_z$ is the uncorrupted rank-two DS tensor away from the two corners. Corner-free $3\times3$ minors of a $2|2$ flattening are cubic polynomials in $z$. For a nondegenerate grouping their common roots are generically the gauge pair $\{z,-z\}$; the section $z>1$ selects the desired branch. Two further minors recover the missing corners linearly. A standard rank-two product decomposition then identifies the DS parameters, and a final $2\times2$ solve recovers $S_\pm$. Some flattenings can be degenerate--for example, a mirror/symmetric-accuracy row pair can make every corner-free minor vanish--so the reconstruction searches the three possible $2|2$ groupings and requires at least one nondegenerate certificate.
+
+\paragraph{$(2,1,1)$: saturated elimination.}
+The mixed states of the size-two block form an atom-free $2\times2\times2$ tensor. Its rank-two decomposition identifies the two singleton reported factors and the weighted DS masses on the two mixed states. Given candidate singleton relation-error rates $(\eta_B,\eta_C)$, the unanimous slices decompose in the basis
+\[
+\mathcal B(\eta_B,\eta_C)=\{G_+,G_-,H_+,H_-\},
+\]
+where $G_\pm$ are the identified DS singleton factors and $H_\pm$ are the two atom factors. Three rational consistency equations remain in $(\eta_B,\eta_C)$. The proof eliminates in the saturated ideal
+\[
+\langle F_0,F_+,F_-\rangle:(\det\mathcal B)^\infty,
+\]
+or equivalently via a Rabinowitsch variable. At an exact interior witness, the lexicographic Gr\"obner basis reduces to
+\[
+(8\eta_B-1)(8\eta_B-7)=0,
+\qquad
+16\eta_B-18\eta_C+1=0,
+\]
+where the two roots are the universal gauge pair. A nonvanishing subresultant/leading-coefficient certificate defines the regular set on which the saturated eliminant has the same minimal degree two.
+
+%======================================================================
+\section{Transformation design after identifiability}
+\label{sec:design}
+
+The identification results describe what a fixed check set can reveal. Design asks which additional transformations should be added.
+
+Fix a current scheme and let $B_0^+$ be its blind false-accept event. For a candidate transformation $\tau$, define $R_\tau$ to be the event that the \emph{reported} new view dissents on an item in $B_0^+$. For a $k=1$ consistency gate define
+\[
+F_t(S)=P_{q_t}\left(B_0^+\cap\bigcup_{\tau\in S}\{R_\tau=1\}\right).
+\]
+This is a monotone submodular coverage function. Under a cardinality budget, greedy achieves the standard $1-1/e$ approximation \cite{nemhauser1978}. Under one nonuniform cost budget, the optimal $1-1/e$ guarantee requires a submodular-knapsack algorithm rather than naive ratio-greedy \cite{sviridenko2004}.
+
+Relation errors make a false-reject constraint essential. Let
+\[
+r_\tau^+=P(Y=+1,R_\tau=1).
+\]
+For the consistency gate,
+\[
+\mathrm{FR}_t(S)
+=P\left(Y=+1,\bigcup_{\tau\in S}\{R_\tau=1\}\right)
+\le\sum_{\tau\in S}r_\tau^+.
+\]
+Retaining both a check-cost budget and this modular relaxation gives two knapsack constraints. For any fixed number of knapsack constraints, monotone submodular maximization admits $1-1/e-\varepsilon$ approximations \cite{kulik2013}. The oracle objective still requires gold information because membership in $B_0^+$ contains the truth label; estimating design gains from the same audit sample creates an adaptive-reuse problem.
+
+%======================================================================
+\section{Verifier repeatability and reproducibility}
+\label{sec:rr}
+
+Identifiability concerns bias that agreement cannot reveal. A complementary metrological question is precision: how stable is the measurement under repetition and implementation changes? Following the repeatability/reproducibility distinction in ISO~5725 \cite{iso5725}, a verifier R\&R experiment crosses repeated stochastic calls, prompt variants, and model families. A random-effects decomposition can separate within-configuration repeatability from prompt and family reproducibility.
+
+This distinction matters because uncertainty sources do not all combine the same way. Sampling variance, verifier stochasticity, and transformation noise belong in a covariance-aware standard error. Blind-set non-identification, adaptive reuse, and model misspecification are bias or partial-identification terms and should be carried as explicit bounds or sensitivity intervals rather than added in quadrature.
+
+%======================================================================
+\section{From static metrology to recursive self-improvement}
+\label{sec:dynamics}
+
+In a self-improvement loop the proposal distribution $q_t$ changes with selection. Static verifier accuracy therefore need not predict the true improvement ceiling. Let $Q_t$ be true quality and let proposed modifications be genuine improvements, detectable bad modifications, or blind-set modifications. A stylized expected drift is
+\[
+v_{\mathrm{true}}(Q_t)
+=E[Q_{t+1}-Q_t\mid Q_t].
+\]
+A \emph{zero-drift equilibrium} satisfies $v_{\mathrm{true}}(Q^*)=0$; it is not a fixed point of the full system and need not be stable. Meanwhile the measured drift can remain positive if blind modifications receive verifier reward.
+
+The empirical prediction for P2 is therefore a bifurcation:
+\[
+v_{\mathrm{true}}\le0
+\qquad\text{while}\qquad
+v_{\mathrm{measured}}>0.
+\]
+The key quantity is blind-set mass under the \emph{induced} proposal distribution $q_t$, not only static verifier accuracy on a held-out benchmark. Because selection changes $q_t$, audit samples must be refreshed. Reusing the same audited set across generations creates an adaptive-data-analysis problem and motivates a separate certified-improvement layer.
+
+%======================================================================
+\section{Discussion and limitations}
+
+The block classification makes a broader point about self-calibration. Independent errors are not always the easiest case. At the four-view boundary, independent relation corruption gives every aggregate component full support and permits global aliasing. Sharing even one relation-error variable creates structural constraints that can remove that aliasing. Correlation can therefore hurt naive ensemble assumptions while helping identification through zeros and symmetries.
+
+Several limitations remain. First, the main block theorems assume one relation-error variable per check and conditional product structure inside the DS components; additional verifier-level latent dependence is not yet modeled. Second, regularity excludes algebraic degeneracies and says little about finite-sample conditioning near those sets. Third, the binary truth model must be extended to graded improvements. Fourth, the better-than-random same-sign sector is substantive when $T\ge2$; mixed reliability-sign sectors are not classified here. Finally, the theory identifies the aggregate atom masses $S_\pm$ but never the internal easy/blind truth split; that distinction requires gold information.
+
+The metrological interpretation is direct. A measurement scheme recovers a latent distinction only when some check responds to it differently from the truth. Changing the correlation structure of measurement errors changes which distinctions satisfy that condition. No amount of redundancy recovers a distinction to which every check responds exactly as the truth does. Once this limit is accepted, the remaining tool is a traceable external audit.
+
+%======================================================================
+\section{Conclusion}
+
+Self-verification is not only an optimization primitive; it is a measurement system. Designed transformations can separate some shared errors from truth, but agreement alone leaves a blind observational equivalence between easy correct accepts and unanimous wrong accepts. Imperfect relations introduce a universal gauge and block-correlated observations. At the minimally informative four-view boundary, the architecture of those blocks determines global identifiability: fully independent relation errors retain additional aliasing, while any coarser partition is generically globally identifiable in the regular same-sign sector. The same shared-error correlation that breaks conditional-independence assumptions can create structural zeros that restore self-calibration.
+
+For RSI, the practical implication is narrow but consequential: a loop should not ask only whether its verifiers agree or how accurate they are on a static benchmark. It should ask which latent failure modes its checks can distinguish, how those modes move under selection, and where a small gold-label budget most reduces the remaining non-identification.
+
+%======================================================================
+\appendix
+\section{Proof artifacts and exact witnesses}
+
+The manuscript is accompanied by deterministic scripts that separate discovery from certification. The $n=4$ singleton open-set ambiguity is certified by a standalone Krawczyk artifact with an exact rational target and an Arb interval-arithmetic check. Exact rational scripts provide Jacobian-rank witnesses for all four-view block partitions, the common-$\rho$ witness for $(3,1)$, flattening-minor witnesses for $(4)$, and a literal Rabinowitsch/Gr\"obner saturation certificate for $(2,1,1)$. Exploratory multistart scans are not used as theorem evidence.
+
+\section{Universal gauge versus relative-sign sectors}
+
+When all $r_\tau\neq0$, the universal gauge changes every sign simultaneously. The invariants
+\[
+\chi_\tau=\operatorname{sgn}(r_1r_\tau),\quad \tau\ge2,
+\]
+classify $2^{T-1}$ sign-pattern orbits. The main block-classification theorem is proved in the same-sign orbit $\chi\equiv+1$ and then gauge-fixed by $r_1>0$. For one block there are no relative-sign invariants; for multiple blocks this restriction is substantive.
+
+\section{A note on exchangeable blocks}
+
+Some closed-form inverses have denominators that vanish on practically relevant submodels. For a size-three block, the explicit inverse based on ratios of $s_k^2-s_\ell^2$ fails when within-block accuracies are exchangeable. This is an exceptional set of that particular reconstruction, not necessarily an identification failure: an exact rational exchangeable witness still has full Jacobian rank. Near such configurations a stable estimator should avoid dividing by the vanishing closed-form denominator and instead fit the full likelihood or use an alternative local parameterization.
+
+%======================================================================
+\begin{thebibliography}{99}\footnotesize\setlength{\itemsep}{0pt}
+\bibitem{allman2009} E.~Allman, C.~Matias, J.~Rhodes. Identifiability of parameters in latent structure models with many observed variables. \emph{Annals of Statistics}, 2009.
+\bibitem{angelopoulos2023} A.~Angelopoulos, S.~Bates, C.~Fannjiang, M.~Jordan, T.~Zrnic. Prediction-powered inference. \emph{Science}, 2023.
+\bibitem{clopper1934} C.~Clopper, E.~Pearson. The use of confidence or fiducial limits illustrated in the case of the binomial. \emph{Biometrika}, 1934.
+\bibitem{dawid1979} A.~Dawid, A.~Skene. Maximum likelihood estimation of observer error-rates using the EM algorithm. \emph{Applied Statistics}, 1979.
+\bibitem{donaldson1972} R.~Donaldson. A simple method for separating spindle error from test ball roundness error. \emph{CIRP Annals}, 1972.
+\bibitem{evans1996} C.~Evans, R.~Hocken, W.~Estler. Self-calibration: reversal, redundancy, error separation, and ``absolute testing.'' \emph{CIRP Annals}, 45(2), 1996.
+\bibitem{fluri2023} L.~Fluri, D.~Paleka, F.~Tram\`er. Evaluating superhuman models with consistency checks. arXiv:2306.09983, 2023.
+\bibitem{iso5725} ISO 5725-1:2023, \emph{Accuracy (trueness and precision) of measurement methods and results---Part 1: General principles and definitions}; ISO 5725-2:2025, \emph{Part 2: Basic method for the determination of repeatability and reproducibility of a standard measurement method}.
+\bibitem{jaffe2016} A.~Jaffe, E.~Fetaya, B.~Nadler, T.~Jiang, Y.~Kluger. Unsupervised ensemble learning with dependent classifiers. \emph{AISTATS}, 2016.
+\bibitem{kruskal1977} J.~Kruskal. Three-way arrays: rank and uniqueness of trilinear decompositions. \emph{Linear Algebra and its Applications}, 1977.
+\bibitem{kulik2013} A.~Kulik, H.~Shachnai, T.~Tamir. Approximations for monotone and nonmonotone submodular maximization with knapsack constraints. \emph{Mathematics of Operations Research}, 2013.
+\bibitem{manski2003} C.~Manski. \emph{Partial Identification of Probability Distributions}. Springer, 2003.
+\bibitem{nemhauser1978} G.~Nemhauser, L.~Wolsey, M.~Fisher. An analysis of approximations for maximizing submodular set functions---I. \emph{Mathematical Programming}, 14:265--294, 1978.
+\bibitem{platanios2014} E.~Platanios, A.~Blum, T.~Mitchell. Estimating accuracy from unlabeled data. \emph{UAI}, 2014.
+\bibitem{sviridenko2004} M.~Sviridenko. A note on maximizing a submodular set function subject to a knapsack constraint. \emph{Operations Research Letters}, 32(1):41--43, 2004.
+\end{thebibliography}
+
+\end{document}
