@@ -82,20 +82,24 @@ def recover(P):
     qB_ord = [(bh[0]+bh[1], bh[0]+bh[2]) for bh in b]
     return dict(etaA=etaA, etaB=etaB, Sp=Sp, Sm=Sm, qA=qA_ord, qB=qB_ord, c=c)
 
-# ---- test on random interior parameters
-errs = []
-for _ in range(500):
-    w = rng.dirichlet([3,3,3,3])
-    qA = [rng.uniform(0.6,0.95,2), rng.uniform(0.05,0.4,2)]
-    qB = [rng.uniform(0.6,0.95,2), rng.uniform(0.05,0.4,2)]
-    eta = rng.uniform(0.03,0.3,2)
-    P = make_law(w,qA,qB,eta)
-    r = recover(P)
-    e = max(abs(r['etaA']-eta[0]), abs(r['etaB']-eta[1]), abs(r['Sp']-w[2]), abs(r['Sm']-w[3]),
-            abs(r['c'][0]-w[0]), abs(r['c'][1]-w[1]),
-            max(abs(r['qA'][h][k]-qA[h][k]) for h in range(2) for k in range(2)),
-            max(abs(r['qB'][h][k]-qB[h][k]) for h in range(2) for k in range(2)))
-    errs.append(e)
-errs=np.array(errs)
-print("(2,2) full constructive inverse (eta, S+-, c+-, qA, qB), 500 random interior points:")
-print("   median error %.2e   90th pct %.2e   max %.2e" % (np.median(errs), np.percentile(errs,90), errs.max()))
+def main():
+    # ---- test on random interior parameters
+    errs = []
+    for _ in range(500):
+        w = rng.dirichlet([3,3,3,3])
+        qA = [rng.uniform(0.6,0.95,2), rng.uniform(0.05,0.4,2)]
+        qB = [rng.uniform(0.6,0.95,2), rng.uniform(0.05,0.4,2)]
+        eta = rng.uniform(0.03,0.3,2)
+        P = make_law(w,qA,qB,eta)
+        r = recover(P)
+        e = max(abs(r['etaA']-eta[0]), abs(r['etaB']-eta[1]), abs(r['Sp']-w[2]), abs(r['Sm']-w[3]),
+                abs(r['c'][0]-w[0]), abs(r['c'][1]-w[1]),
+                max(abs(r['qA'][h][k]-qA[h][k]) for h in range(2) for k in range(2)),
+                max(abs(r['qB'][h][k]-qB[h][k]) for h in range(2) for k in range(2)))
+        errs.append(e)
+    errs=np.array(errs)
+    print("(2,2) full constructive inverse (eta, S+-, c+-, qA, qB), 500 random interior points:")
+    print("   median error %.2e   90th pct %.2e   max %.2e" % (np.median(errs), np.percentile(errs,90), errs.max()))
+
+if __name__ == "__main__":
+    main()
