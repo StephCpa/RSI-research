@@ -2,18 +2,20 @@
 
 Usage:
   cp audit_config.example.json audit_config.json
-  # fill every required field and add prompt files
+  # fill every required field and add prompt/manifest files
   python freeze_audit_config.py audit_config.json
 
 The command refuses null/empty required fields, hashes the config plus every
-referenced prompt/manifest file, and writes audit_config.lock.json. Commit the
-lock file before collecting or inspecting gold outcomes.
+referenced prompt/manifest file AND the preregistered analysis code, then writes
+audit_config.lock.json. Commit the lock before candidate generation or any gold
+inspection.
 """
 from __future__ import annotations
 import hashlib, json, sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+EXPECTED_PROTOCOL = "audit_prereg_v0_2"
 
 REQUIRED_PATHS = [
     ("benchmark", "name"),
@@ -32,14 +34,17 @@ REQUIRED_PATHS = [
     ("candidate_budget",),
 ]
 
+
 def get(d, path):
     x = d
     for k in path:
         x = x[k]
     return x
 
+
 def sha256_bytes(b):
     return hashlib.sha256(b).hexdigest()
+
 
 def resolve_file(value):
     p = Path(value)
@@ -48,6 +53,7 @@ def resolve_file(value):
     if not p.exists():
         raise FileNotFoundError(p)
     return p
+
 
 def main():
     if len(sys.argv) != 2:
@@ -69,8 +75,12 @@ def main():
                 missing.append(f"judges[{j.get('label','?')}].{k}")
     if len(cfg.get("judges", [])) < 2:
         missing.append("judges (need >=2)")
+    if cfg.get("protocol_version") != EXPECTED_PROTOCOL:
+        missing.append(
+            f"protocol_version must equal {EXPECTED_PROTOCOL!r}"
+        )
     if missing:
-        print("CONFIG NOT FROZEN; fill:")
+        print("CONFIG NOT FROZEN; fix:")
         for x in missing:
             print("  -", x)
         raise SystemExit(2)
@@ -88,20 +98,37 @@ def main():
     for path in file_keys:
         value = get(cfg, path)
         p = resolve_file(value)
-        hashes[str(p.relative_to(HERE) if p.is_relative_to(HERE) else p)] = sha256_bytes(p.read_bytes())
+        name = str(p.relative_to(HERE) if p.is_relative_to(HERE) else p)
+        hashes[name] = sha256_bytes(p.read_bytes())
+
+    # Freeze the analysis degrees of freedom too.
+    analysis_files = [
+        HERE / "audit_analysis.py",
+        HERE / "audit_goldblind.py",
+        HERE / "audit_prereg_v0_2.md",
+        HERE / "freeze_audit_config.py",
+    ]
+    for p in analysis_files:
+        if not p.exists():
+            raise FileNotFoundError(p)
+        hashes[str(p.relative_to(HERE))] = sha256_bytes(p.read_bytes())
 
     canonical = json.dumps(cfg, sort_keys=True, separators=(",", ":")).encode()
     lock = {
         "protocol_version": cfg["protocol_version"],
         "config_sha256": sha256_bytes(canonical),
         "file_sha256": hashes,
-        "config": cfg
+        "config": cfg,
     }
     out = HERE / "audit_config.lock.json"
     out.write_text(json.dumps(lock, indent=2, sort_keys=True) + "\n")
     print("AUDIT_CONFIG_FROZEN")
     print("config_sha256:", lock["config_sha256"])
+    print("analysis_sha256:", hashes["audit_analysis.py"])
+    print("goldblind_sha256:", hashes["audit_goldblind.py"])
+    print("prereg_sha256:", hashes["audit_prereg_v0_2.md"])
     print("wrote:", out)
+
 
 if __name__ == "__main__":
     main()
