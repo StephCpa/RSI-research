@@ -1,0 +1,100 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs,enumitem,array}
+\usepackage[hidelinks]{hyperref}
+\usepackage[expansion=false]{microtype}
+\setlist{nosep,leftmargin=1.5em}
+
+\newtheorem{proposition}{Proposition}
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+\newcommand{\status}[1]{\hfill{\normalfont\small\textsc{[#1]}}}
+\newcommand{\N}{\mathcal{N}_3}
+
+\title{\textbf{v0.7 note}\\[2pt]
+\large The $(2,2)$ inverse completed, and $(3,1)$ run end to end}
+\author{18 September 2026}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-2.5em}
+
+The artifact gap is real and fixed: my v0.6 claim covered more than the script checked. With your left-inverse step the $(2,2)$ inverse is complete and verified on all parameters. More importantly, your $(3,1)$ decomposition works in practice --- I implemented the whole chain and it recovers every parameter to $10^{-14}$, with the feasible oriented pair unique in 47 of 47 instances. $(4)$ is now the only black-box case.
+
+%======================================================================
+\section*{1. $(2,2)$: full inverse, verified}
+
+Your left-inverse step is cleaner than solving a second quadratic on the row space, and it removes the pairing question entirely: with $A=[a_+\;a_-]$ and $C=A^\dagger R^\star$, each row is $c_h b_h^\top$, so $c_h=\sum_j C_{hj}$ and $b_h=C_{h,:}/c_h$, with the labels already fixed by the side-$A$ orientation.
+
+Implemented and tested on 500 random interior draws, comparing \emph{all} aggregate parameters $\eta_A,\eta_B,S_\pm,c_\pm,q_{A,\pm},q_{B,\pm}$:
+\[
+\text{median }2.5\times10^{-15},\qquad 90\text{th pct }4.3\times10^{-14},\qquad\max 2.4\times10^{-12},
+\]
+which matches your run. The memo sentence about the row space and pairing is replaced by the left-inverse argument.
+
+%======================================================================
+\section*{2. Two statements tightened}
+
+\paragraph{Singleton count is a nuisance axis, not the phase axis.} Adopted as you wrote it: the number of singleton blocks controls a guaranteed confounding dimension of the DS-only map, since a singleton block enters only through $p_{\pm,\tau}=\eta_\tau+(1-2\eta_\tau)q_{\pm,\tau}$; the sizes and arrangement of the non-singleton blocks control how much structural-zero geometry is available. $(2,2)$ against $(4)$ is the counterexample that kills the one-axis version: both have no singletons, one has a constructive global proof and the other does not.
+
+\paragraph{Exchangeable case.} Adopted: the closed-form inverse degenerates on the exchangeable submodel, but that submodel is not contained in the rank-deficient locus, and since the minor restricted to it is nonzero at an exact rational point, generic exchangeable points remain locally identifiable. Not ``identification survives at exactly equal accuracies,'' which over-claims.
+
+%======================================================================
+\section*{3. $(3,1)$ runs end to end}
+
+I implemented your decomposition literally: atom-free $6\times2$ matrix, its column space $L$, the quartic $H(a(t))=0$ along $a(t)=u+tv$, the size-3 inverse on each real root, selection by orientation and common $\eta_A$, then the atom-residual closure
+\[
+r_B=\frac{E[X_AX_B]}{r_A},\qquad \mu=\frac{E[X_A]}{r_A},\qquad S_\pm=\frac{S_++S_-}{2}(1\pm\mu),\qquad q_{\pm,B}=\frac{p_{\pm,B}-\eta_B}{1-2\eta_B}.
+\]
+
+Over 50 random interior instances (47 inside the sampling constraints):
+
+\begin{center}\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+real roots of the quartic & 4 in every instance\\
+feasible oriented pairs sharing $\eta_A$ & exactly 1 in every instance (47/47)\\
+full-parameter error ($c_\pm,q_{A,\pm},\eta_A,\eta_B,q_{B,\pm},S_\pm$) & median $1.2\times10^{-14}$, 90th pct $1.3\times10^{-13}$, max $3.9\times10^{-11}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+So $(3,1)$ is constructively solved up to the genericity statement. Your uniqueness conjecture is now the only gap, and it replicates at $5\times$ your sample size.
+
+\begin{remark}[a scaling step the write-up must not skip]
+The quartic returns a \emph{direction}, and the size-3 inverse recovers $(q,\eta_A)$ scale-invariantly --- but the mixture weight does not come out of the least-squares step directly. Writing $a_h$ normalised to sum one on $\N$, the left inverse against the atom-free matrix returns $\kappa_h=c_h\sum_{z\in\N}P_A(z\mid h)$, not $c_h$. The correction needs the already-recovered $(q_h,\eta_A)$:
+\[
+c_h=\kappa_h\Big/\sum_{z\in\N}P_A(z\mid h).
+\]
+Omitting it leaves $c_h$ wrong by the DS mass on the non-unanimous patterns, which then pollutes the DS subtraction and corrupts $\eta_B$, $\mu$ and $S_\pm$ downstream. In my first run this produced errors of $0.18$ while every selection step was still working correctly --- worth a line in the proof, since the error is silent.
+\end{remark}
+
+\begin{remark}[where the uniqueness proof might come from]
+In the instance I inspected in detail, the two true directions sat at $t=0.7190$ and $t=-0.3524$, and the two spurious roots at $t=-7.2615$ and $t=0.0812$. The spurious roots failed positivity and orientation, not the common-$\eta_A$ test. If that is the general pattern, the uniqueness statement may be provable by showing the other two roots of the quartic cannot be positive vectors with all $q$ on one side of $1/2$ --- a sign condition on the quartic's remaining factor, rather than an argument about the $\eta$ match.
+\end{remark}
+
+%======================================================================
+\section*{4. Phase diagram, and the write-up order}
+
+\begin{center}\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+partition & status & what is left\\
+\midrule
+$(1,1,1,1)$ & globally ambiguous on an open set & certified; nothing\\
+$(2,2)$ & \textbf{full constructive inverse} & write-up\\
+$(3,1,1)$, $n=5$ & constructive; exceptional sets to name & write-up\\
+$(2,1,1)$ & restricted tensor $+$ size-2 inversion & small algebra\\
+$(3,1)$ & \textbf{constructive pipeline verified} & genericity of the unique oriented pair\\
+$(4)$ & atom-free map locally full rank & global uniqueness: open\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Your order $(2,2)\to(3,1,1)\to(2,1,1)\to(3,1)\to(4)$ is right, and $(3,1)$ should now be presented as \emph{quartic finite decomposition $+$ closed-form atom-residual closure} rather than as an open coupling problem. The section's takeaway is the one you formulated: block correlation does not only break conditional independence, it creates structural zeros, and those zeros can restore global identifiability that the independent-view model loses.
+
+\paragraph{Scripts.} \texttt{two\_two.py} (full $(2,2)$ inverse, 500-draw test), \texttt{threeone.py} (quartic selection, scaling correction, atom-residual closure, 50-instance test).
+\end{document}
