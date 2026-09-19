@@ -1,11 +1,13 @@
 {
-  "protocol_version": "audit_prereg_v0_2",
+  "protocol_version": "audit_prereg_v0_3",
   "benchmark": {
     "name": null,
     "version_or_commit": null,
     "problem_manifest": null,
     "visible_suite_definition": null,
-    "gold_suite_definition": null
+    "gold_suite_definition": null,
+    "base_test_split_seed": 20260919,
+    "base_test_split_manifest": null
   },
   "candidate_generation": {
     "model_ids": [],
@@ -40,8 +42,7 @@
   },
   "metamorphic_manifest": null,
   "candidate_budget": null,
-  "unanimous_target": 1000,
-  "kill_threshold_false_accept_rate": 0.005,
+  "unanimous_target": 2500,
   "audit_budgets": [
     25,
     50,
@@ -50,16 +51,30 @@
     500,
     1000
   ],
-  "goldblind_budget_panel_u1_threshold": 0.6,
   "cluster_bootstrap_reps": 10000,
   "fixed_pool_cp_alpha": 0.05,
-  "main_text_relevance_threshold": 0.005,
   "preflight_candidates": 50,
   "fixed_diagnostic_cohort_samples_per_problem": 10,
   "analysis": {
     "primary_interval": "problem_cluster_bootstrap",
-    "fixed_pool_sensitivity": "clopper_pearson",
+    "cluster_bootstrap_reps": 10000,
     "primary_transformation_estimand": "r0_minus_r1",
-    "disagreement_only": "appendix_structural_control"
+    "deduplicate_by": "ast_hash_within_problem",
+    "ds_excess_starts": 12,
+    "allocation_reps": 2000,
+    "deployed_gate": "testB_positive_and_at_least_4_of_6_llm_views_positive"
+  },
+  "judge_repeatability": {
+    "fraction": 0.05,
+    "seed": 20260920
+  },
+  "practical_blind_error_bar": 0.02,
+  "judge_quality_upper_bar": 0.4,
+  "fixed_pool_precision_halfwidth_target": 0.02,
+  "robustness_benchmark": {
+    "name": "MBPP+",
+    "version_or_commit": null,
+    "problem_manifest": null,
+    "samples_per_problem": 5
   }
 }
