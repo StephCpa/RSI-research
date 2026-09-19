@@ -564,8 +564,11 @@ def run(args):
                                  seconds=time.perf_counter() - t0))
 
                 t0 = time.perf_counter()
-                mlec = fit_mle(counts, part, max(1, args.constructive_starts), rng,
-                               init=constructive, maxiter=args.maxiter)
+                if constructive is None:
+                    mlec = None
+                else:
+                    mlec = fit_mle(counts, part, max(1, args.constructive_starts), rng,
+                                   init=constructive, maxiter=args.maxiter)
                 rows.append(dict(partition=part, N=N, replicate=rep, method="mle_constructive",
                                  error=errfun(mlec, truth), regularity_margin=reg,
                                  seconds=time.perf_counter() - t0))
