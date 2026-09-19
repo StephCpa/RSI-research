@@ -3,6 +3,7 @@
 \usepackage{amsmath,amssymb,amsthm,mathtools}
 \usepackage{booktabs,graphicx,enumitem,array,microtype}
 \usepackage[hidelinks]{hyperref}
+\graphicspath{{../figures/}}
 \setlist{nosep,leftmargin=1.5em}
 
 \newtheorem{theorem}{Theorem}
@@ -27,7 +28,7 @@
 
 \title{\textbf{Self-Calibration of AI Verifiers:}\\[2pt]
 \large Identifiability under Shared Blind Spots and Correlated Checks}
-\author{Working manuscript -- merged theory draft v1.0}
+\author{Working manuscript -- merged theory draft v1.1}
 \date{19 September 2026}
 
 \begin{document}
@@ -64,6 +65,22 @@ We answer it at three levels. First, we isolate the observational equivalence th
 \end{enumerate}
 
 The main conceptual conclusion is that correlated verifier errors are not only a nuisance. When they induce structured zeros or shared invariances, they can make the latent measurement system \emph{more} globally identifiable than a fully independent corruption model.
+
+%======================================================================
+\section{Related work}
+\label{sec:related}
+
+\paragraph{Unlabeled ensemble accuracy and latent-class identification.}
+Dawid--Skene models infer annotator error rates from repeated labels under conditional independence \cite{dawid1979}; later work studies unlabeled accuracy estimation and dependent classifiers \cite{platanios2014,jaffe2016}. Generic identifiability of finite latent-structure models follows from tensor-decomposition arguments such as Kruskal's theorem and the Allman--Matias--Rhodes conditions \cite{kruskal1977,allman2009}. Our setting differs in two ways: the unanimous atom types are observationally identical by construction, and relation errors act at the check/block level, creating structured dependence rather than arbitrary annotator correlation.
+
+\paragraph{Consistency checks and correlated LLM judges.}
+Consistency checking has been proposed as a way to evaluate systems that may exceed a direct human reference \cite{fluri2023}. Recent empirical work shows that errors remain strongly correlated even across diverse LLMs, including in LLM-as-a-judge settings \cite{kim2025,kohli2026}. CARE explicitly models shared latent confounders and proves identification under its factor structure \cite{zhao2026}; our contribution is complementary: we study designed transformations, an explicit easy/blind observational equivalence, and how the \emph{block structure} of relation corruption changes global identifiability. A recent covariance-geometry analysis proves that common-mode evaluator error is not identifiable from internal judge scores alone under its model \cite{afrin2026}; our blind-set result is a discrete analogue that is robust to any truth-independent observation channel.
+
+\paragraph{Anchors, audits, and common-mode error.}
+Sunkavalli studies anchor--judge correlation under a single-common-factor model, deriving closed-form identification with multiple anchors and explicit diagnostic failure boundaries \cite{sunkavalli2026}. Our gold-audit result takes a different route: rather than assuming an anchor belongs to the same latent factor model, we use a small externally trusted sample to resolve the exact unanimous stratum that internal agreement cannot separate. Prediction-powered inference supplies a broader framework for combining plentiful imperfect predictions with scarce gold labels \cite{angelopoulos2023}; here the design question is where those gold labels are most informative.
+
+\paragraph{Metrological self-calibration.}
+The error-separation viewpoint is classical in precision metrology: reversal, redundancy, and absolute testing can identify systematic errors without requiring every reference to dominate the artifact \cite{donaldson1972,evans1996}. We translate that logic into verifier design: a transformation is useful only if it makes at least one latent failure mode respond differently from truth.
 
 %======================================================================
 \section{Setup: transformations, normalized views, and blind sets}
@@ -115,23 +132,22 @@ The last example captures the basic self-calibration principle: more measurement
 
 The easiest non-identification result does not require a particular noise model.
 
-\begin{proposition}[Transfer non-identification]
-Suppose a model class contains two latent types that induce the same law of normalized views. Then mass can be transferred between those types without changing the observed law. In particular, if an easy correct accept $E^+$ and a blind false accept $B^+$ both satisfy $W=+\one$, then the split
+\begin{proposition}[Sharp transfer non-identification]
+\label{prop:transfer}
+Easy correct accepts $E^+$ and blind false accepts $B^+$ necessarily induce the same normalized-view law: both have $W\equiv+\one$. Hence, for any fixed remainder of the model, transferring mass between $E^+$ and $B^+$ leaves the observed view law unchanged. The same holds for $(E^-,B^-)$ at $-\one$.
+
+This non-identification survives any observation channel $K(\widetilde w\mid w)$ that is independent of the truth label conditional on the latent view vector, because equal input laws induce equal output laws. If the remainder of the model is point identified and $S_+=\lambda_{E+}+\lambda_{B+}$ is identified, then the sharp identified set for the blind-positive mass is
 \[
-(\lambda_{E+},\lambda_{B+})
+\lambda_{B+}\in[0,S_+],
 \]
-is not identified from the view law. Only the sum
-\[
-S_+=\lambda_{E+}+\lambda_{B+}
-\]
-can be identified when the rest of the model is identified. The same statement holds for $(E^-,B^-)$ and $S_-$.
+and every point is attained. In a larger model class where the remainder or $S_+$ is only partially identified, the identified set can only widen. The mirror statement holds for $S_-$.
 \end{proposition}
 
 This is an identification statement, not a claim that the system can never certify correctness. Gold labels, formal checkers, trusted hidden tests, or additional assumptions can separate the types. Agreement data alone cannot.
 
 \subsection{A boundary model for auditing}
 
-For a concrete audit calculation, consider a Dawid--Skene component plus unanimous atoms. Given a regular component $H=0$, views are conditionally independent given $Y$, with class-specific accuracies $\alpha_v^y>1/2$. Add four atoms: easy positives and blind false accepts at $+\one$, and easy negatives and blind false rejects at $-\one$. The observed law has the form
+For a concrete audit calculation, consider a Dawid--Skene component plus unanimous atoms \cite{dawid1979}. Given a regular component $H=0$, views are conditionally independent given $Y$, with class-specific accuracies $\alpha_v^y>1/2$. Add four atoms: easy positives and blind false accepts at $+\one$, and easy negatives and blind false rejects at $-\one$. The observed law has the form
 \begin{equation}
 \label{eq:dsa}
 p(w)=c_+\prod_vP_v(w_v\mid+)+c_-\prod_vP_v(w_v\mid-)
@@ -260,7 +276,7 @@ First take $T=n$, so every relation error is independent across views. After cor
 
 \begin{theorem}[Singleton-block phase transition]
 \label{thm:singleton}
-For the aggregate singleton-block model, in the same-sign sector and away from proper algebraic exceptional sets:
+For the aggregate singleton-block model, in the same-sign sector and on the regular set $\Delta_{\mathrm{sing},n}\neq0$ defined in Appendix~\ref{app:regularity}:
 \begin{enumerate}
 \item if $n\le3$, the model is not locally identifiable by dimension;
 \item if $n=4$, the model is generically locally identifiable, but is globally non-identifiable on a nonempty open set;
@@ -269,7 +285,9 @@ For the aggregate singleton-block model, in the same-sign sector and away from p
 For every $n$, the internal splits $(E^+,B^+)$ and $(E^-,B^-)$ remain non-identified from the view law.
 \end{theorem}
 
-\paragraph{Proof sketch.}
+\paragraph{Proof status.}
+The $n\le3$ dimension obstruction, the $n=4$ local-rank witness, and the certified $n=4$ two-root statement are complete. The $n\ge5$ global result is a generic latent-class identification theorem obtained by the Kruskal/Allman argument below, with the required rank and permutation-separation conditions included in $\Delta_{\mathrm{sing},n}$.
+
 At $n=3$, the aggregate model has 12 parameters but only $2^3-1=7$ independent cell probabilities. At $n=4$, the map has 15 parameters and 15 independent cells. An exact rational witness has a nonsingular Jacobian, proving generic local identifiability. Global uniqueness nevertheless fails: a standalone interval-arithmetic certificate gives two distinct regular interior roots with the same reported law. The inverse function theorem then implies a nonempty open set of laws with at least two feasible preimages.
 
 For $n=5$, group the binary views as $2+2+1$. The four latent components yield generic Kruskal ranks $4,4,2$, satisfying
@@ -299,7 +317,7 @@ A parameter is \emph{oriented-interior} if all aggregate component masses are po
 A parameter is \emph{regular for partition $\pi$} if, in addition, the finite determinants, discriminants, and subresultants used by the reconstruction for $\pi$ are nonzero.
 \end{definition}
 
-For $(2,2)$ this includes $\det R_{MM}\neq0$, a nondegenerate product quadratic, and nonzero atom-moment denominators. For $(3,1)$ it includes nondegenerate line--model intersection and a degree-one common-$\rho$ gcd. For $(2,1,1)$ it includes $\det\mathcal B\neq0$ and a minimal-degree-two saturated eliminant. For $(4)$ regularity means that \emph{at least one} of the three $2|2$ flattenings has a nondegenerate corner-free-minor certificate, together with nonzero corner-recovery slopes and a nondegenerate rank-2 product decomposition. Each condition is verified nonvacuously by an exact rational witness.
+Appendix~\ref{app:regularity} defines explicit algebraic certificates $\Delta_\pi$. Briefly, $\Delta_{(2,2)}$ contains $\det R_{MM}$, the discriminant of the product quadric restricted to the recovered line, and the atom-moment denominators. For $(3,1)$ there is a \emph{family} $\{\Delta_{31,g}\}$ over admissible choices of the two quadratic-difference pairs: regularity requires at least one choice with nonzero size-three inversion denominator and a degree-one common-$\rho$ gcd. For $(4)$ there is likewise a family $\{\Delta_{4,g}\}$ over the three $2|2$ flattenings, and regularity requires at least one nonzero certificate. For $(2,1,1)$, $\Delta_{(2,1,1)}$ contains $\det\mathcal B$ and the leading-coefficient/subresultant conditions stating that the saturated elimination ideal is zero-dimensional of degree two. Each regular set is nonempty by an exact rational witness.
 
 \begin{theorem}[Four-view block classification]
 \label{thm:block}
@@ -399,7 +417,7 @@ For the consistency gate,
 =P\left(Y=+1,\bigcup_{\tau\in S}\{R_\tau=1\}\right)
 \le\sum_{\tau\in S}r_\tau^+.
 \]
-Retaining both a check-cost budget and this modular relaxation gives two knapsack constraints. For any fixed number of knapsack constraints, monotone submodular maximization admits $1-1/e-\varepsilon$ approximations \cite{kulik2013}. The oracle objective still requires gold information because membership in $B_0^+$ contains the truth label; estimating design gains from the same audit sample creates an adaptive-reuse problem.
+Retaining both a check-cost budget and this modular relaxation gives two knapsack constraints. For any fixed number of knapsack constraints, monotone submodular maximization admits $1-1/e-\varepsilon$ approximations \cite{kulik2013}. The submodularity statement is specific to the $k=1$ consistency gate: for a threshold rule that fires only after at least $k\ge2$ dissenting checks, the set function giving the probability of at least $k$ detections is monotone but is not submodular in general. The oracle objective still requires gold information because membership in $B_0^+$ contains the truth label; estimating design gains from the same audit sample creates an adaptive-reuse problem.
 
 %======================================================================
 \section{Verifier repeatability and reproducibility}
@@ -448,7 +466,7 @@ For RSI, the practical implication is narrow but consequential: a loop should no
 \appendix
 \section{Proof artifacts and exact witnesses}
 
-The manuscript is accompanied by deterministic scripts that separate discovery from certification. The $n=4$ singleton open-set ambiguity is certified by a standalone Krawczyk artifact with an exact rational target and an Arb interval-arithmetic check. Exact rational scripts provide Jacobian-rank witnesses for all four-view block partitions, the common-$\rho$ witness for $(3,1)$, flattening-minor witnesses for $(4)$, and a literal Rabinowitsch/Gr\"obner saturation certificate for $(2,1,1)$. Exploratory multistart scans are not used as theorem evidence.
+The manuscript is accompanied by deterministic scripts that separate discovery from certification. The $n=4$ singleton open-set ambiguity is certified by a standalone Krawczyk artifact with an exact rational target and an Arb interval-arithmetic check. Exact rational scripts provide Jacobian-rank witnesses for all four-view block partitions, the common-$\rho$ witness for $(3,1)$, flattening-minor witnesses for $(4)$, and a literal Rabinowitsch/Gr\"obner saturation certificate for $(2,1,1)$. Exploratory multistart scans are not used as theorem evidence and are intentionally omitted from the release bundle; the repository keeps only scripts needed to reproduce theorem witnesses, certificates, and the published figure.
 
 \section{Universal gauge versus relative-sign sectors}
 
@@ -457,6 +475,17 @@ When all $r_\tau\neq0$, the universal gauge changes every sign simultaneously. T
 \chi_\tau=\operatorname{sgn}(r_1r_\tau),\quad \tau\ge2,
 \]
 classify $2^{T-1}$ sign-pattern orbits. The main block-classification theorem is proved in the same-sign orbit $\chi\equiv+1$ and then gauge-fixed by $r_1>0$. For one block there are no relative-sign invariants; for multiple blocks this restriction is substantive.
+
+\section{Explicit regularity certificates}
+\label{app:regularity}
+
+The notation $\Delta_\pi\neq0$ abbreviates a finite list of polynomial nonvanishing conditions, not the desired uniqueness conclusion.
+
+For $(2,2)$, $\Delta_{(2,2)}$ is the product of: $\det R_{MM}$; the discriminant of the product quadric restricted to the recovered two-dimensional component line; the two component normalizing masses; and the denominators in the atom-moment inversion. For $(3,1)$, each admissible pair-choice $g$ defines a certificate $\Delta_{31,g}$ containing a nonzero $s_k^2-s_\ell^2$ denominator, the relevant quadratic discriminants, and a subresultant certificate that the three cross-product polynomials in $\rho$ have gcd degree exactly one. Regularity requires $\Delta_{31,g}\neq0$ for at least one $g$.
+
+For $(4)$, each $2|2$ grouping $g$ defines $\Delta_{4,g}$ as the product of a nonzero corner-free-minor gcd certificate, the two corner-recovery slopes, and the rank-two product-decomposition discriminant. Regularity is existential: $\Delta_{4,g}\neq0$ for at least one of the three groupings. For $(2,1,1)$, $\Delta_{(2,1,1)}$ contains $\det\mathcal B$, the leading coefficient of the lexicographic saturated eliminant, and the subresultants that certify that the saturated zero-dimensional scheme has degree two.
+
+For singleton blocks with $n\ge5$, $\Delta_{\mathrm{sing},n}$ contains grouped-factor determinants (or the corresponding Kruskal-rank minors) together with the nonvanishing conditions that distinguish the complementary atom pair from the two DS components and orient the latter. For $n=4$, local regularity is the nonzero Jacobian minor used by the exact witness.
 
 \section{A note on exchangeable blocks}
 
@@ -471,6 +500,11 @@ Some closed-form inverses have denominators that vanish on practically relevant 
 \bibitem{donaldson1972} R.~Donaldson. A simple method for separating spindle error from test ball roundness error. \emph{CIRP Annals}, 1972.
 \bibitem{evans1996} C.~Evans, R.~Hocken, W.~Estler. Self-calibration: reversal, redundancy, error separation, and ``absolute testing.'' \emph{CIRP Annals}, 45(2), 1996.
 \bibitem{fluri2023} L.~Fluri, D.~Paleka, F.~Tram\`er. Evaluating superhuman models with consistency checks. arXiv:2306.09983, 2023.
+\bibitem{kim2025} E.~M.~Kim, A.~Garg, K.~Peng, N.~Garg. Correlated Errors in Large Language Models. \emph{ICML}, 2025.
+\bibitem{kohli2026} G.~Kohli. Nine Judges, Two Effective Votes: Correlated Errors Undermine LLM Evaluation Panels. arXiv:2605.29800, 2026.
+\bibitem{zhao2026} J.~Zhao, C.~Shin, T.-H.~Huang, S.~S.~S.~Namburi GNVV, F.~Sala. CARE: Confounder-Aware Aggregation for Reliable LLM Evaluation. arXiv:2603.00039, 2026.
+\bibitem{sunkavalli2026} V.~K.~Sunkavalli. A Closed-Form Estimator and Diagnostic Battery for Anchor-Judge Error Correlation, Under a Single-Common-Factor Model. arXiv:2609.08826, 2026.
+\bibitem{afrin2026} F.~Afrin, I.~F.~Shihab. Evaluator Ensembles Under Reward Hacking: Covariance Geometry and Finite-Search Guarantees. arXiv:2608.08002, 2026.
 \bibitem{iso5725} ISO 5725-1:2023, \emph{Accuracy (trueness and precision) of measurement methods and results---Part 1: General principles and definitions}; ISO 5725-2:2025, \emph{Part 2: Basic method for the determination of repeatability and reproducibility of a standard measurement method}.
 \bibitem{jaffe2016} A.~Jaffe, E.~Fetaya, B.~Nadler, T.~Jiang, Y.~Kluger. Unsupervised ensemble learning with dependent classifiers. \emph{AISTATS}, 2016.
 \bibitem{kruskal1977} J.~Kruskal. Three-way arrays: rank and uniqueness of trilinear decompositions. \emph{Linear Algebra and its Applications}, 1977.
