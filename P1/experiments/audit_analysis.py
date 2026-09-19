@@ -296,6 +296,8 @@ def main():
     p.add_argument("--budgets", type=int, nargs="+", default=[25, 50, 100, 200, 500, 1000])
     p.add_argument("--seed", type=int, default=20260919)
     p.add_argument("--threshold", type=float, default=.005)
+    p.add_argument("--goldblind-summary", default=None,
+                   help="goldblind_summary.json from the fixed first cohort")
     p.add_argument("--output", default=None)
     a = p.parse_args()
 
@@ -357,6 +359,15 @@ def main():
     print(f"delta_b (magnitude only)={point['delta_b']:.6f}")
     print("PREREG_TIER:", tier)
 
+    if a.goldblind_summary:
+        gb = json.loads(Path(a.goldblind_summary).read_text())
+        budget_status = gb["budget_panel_status"]
+        frozen_u1 = float(gb["u1"])
+    else:
+        budget_status = "UNFROZEN_FALLBACK"
+        frozen_u1 = float(point["u1"])
+        print("WARNING: --goldblind-summary not supplied; budget-panel prominence is not preregistered.")
+
     sim = simulate_fixed_pool_allocations(truth, u1, a.budgets, a.budget_reps, a.seed + 1)
     outdir = Path(a.output) if a.output else path.parent / "audit_results"
     outdir.mkdir(parents=True, exist_ok=True)
@@ -380,6 +391,8 @@ def main():
         "k_u1": k_u1,
         "blind_problem_count": blind_problem_count,
         "tier": tier,
+        "goldblind_budget_panel_status": budget_status,
+        "goldblind_fixed_cohort_u1": frozen_u1,
     }
     (outdir / "audit_summary.json").write_text(json.dumps(summary, indent=2, default=float) + "\n")
 
@@ -394,7 +407,7 @@ def main():
     write_csv(table, outdir / "transformation_2x2.csv")
 
     make_primary_figure(point, boot, cp, sim, outdir / "audit_primary.pdf",
-                        show_budget=point["u1"] <= .60)
+                        show_budget=(budget_status == "candidate-main"))
     print("wrote:", outdir)
 
 
