@@ -1,0 +1,243 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs,graphicx,enumitem,array}
+\usepackage[hidelinks]{hyperref}
+\usepackage{microtype}
+\setlist{nosep,leftmargin=1.5em}
+
+\newtheorem{proposition}{Proposition}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
+\newtheorem{conjecture}{Conjecture}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{example}{Example}
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+\newcommand{\status}[1]{\hfill{\normalfont\small\textsc{[#1]}}}
+\newcommand{\cV}{\mathcal{V}}
+\newcommand{\one}{\mathbf{1}}
+\newcommand{\Up}{U^{+}}
+\DeclareMathOperator{\CPup}{\overline{r}}
+
+\title{\textbf{Reversal, Closure, and the Blind Set}\\[2pt]
+\large Formal memo for P1: what agreement among checks can and cannot certify\\ in a self-improvement loop}
+\author{Draft v0.1b \textperiodcentered{} 18 September 2026 \textperiodcentered{} for internal discussion}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-2.5em}
+
+\paragraph{Purpose.} This memo fixes the setup, estimands, and first results for P1, and lists the questions I want a statistician to check against existing literature before we invest further. Each result is tagged \textsc{[proved]}, \textsc{[numerical evidence]}, or \textsc{[conjecture]}. The proofs given are short; nothing tagged \textsc{[conjecture]} should be cited as a result.
+
+\paragraph{Summary of claims.}
+(i)~Designed transformations with known effects on the truth label turn verifier outputs into a vector of \emph{normalized views}; every error that a check can reveal appears as disagreement among these views (Lemma~\ref{lem:consistency}).
+(ii)~In any model that allows both easy items and shared errors, the mass of \emph{blind false accepts} is not identified from agreement data, and the non-identification is sharp (Proposition~\ref{prop:nonid}).
+(iii)~In a Dawid--Skene model with unanimous atoms, everything else is identified once there are four conditionally independent views, one more than the classical threshold (Proposition~\ref{prop:id}).
+(iv)~Adding conditionally independent views drives the false-accept mass of a majority gate down to exactly the unidentified blind mass; only checks or verifiers under which a mechanism's items stop being unanimous lower that floor (Proposition~\ref{prop:limit}, Lemma~\ref{lem:mono}).
+(v)~Gold labels outside the unanimous-accept stratum carry no information about the unidentified component, so audits belong where every check agrees (Lemma~\ref{lem:audit}).
+
+%======================================================================
+\section{Setup}
+
+\paragraph{Candidates, truth, verifiers.} At generation $t$ the loop proposes candidates $x\in\mathcal{X}$ from a distribution $q_t$; we suppress $t$ until Section~\ref{sec:dynamics}. Each candidate has a truth label $Y(x)\in\{-1,+1\}$, where $+1$ means genuinely correct (or a genuine improvement). Verifiers $V_1,\dots,V_m:\mathcal{X}\to\{-1,+1\}$ output accept ($+1$) or reject ($-1$).
+
+\paragraph{Checks as transformations.} A check is a map $\tau:\mathcal{X}\to\mathcal{X}$ with a \emph{known label relation} $s_\tau\in\{-1,+1\}$ such that $Y(\tau x)=s_\tau Y(x)$ on the support of $q$. Label-preserving examples ($s_\tau=+1$): paraphrase, semantics-preserving refactoring, reordering irrelevant context. Label-flipping examples ($s_\tau=-1$): negating a claim, swapping which answer a pairwise comparison asks about. Let $T$ be a finite set of checks containing the identity.
+
+\begin{definition}[Normalized views]
+The view set is $\cV=[m]\times T$. For $v=(j,\tau)$ define $W_v(x)=s_\tau\,V_j(\tau x)$, and the error indicator $\varepsilon_v(x)=\mathbb{I}\{W_v(x)\neq Y(x)\}$.
+\end{definition}
+
+Since $s_\tau^2=1$, $\varepsilon_v(x)=1$ exactly when verifier $j$ is wrong on the transformed item $\tau x$. Normalization therefore puts every view on the same latent bit $Y(x)$.
+
+\begin{lemma}[Consistency]\label{lem:consistency}\status{proved}
+If $\varepsilon\equiv 0$ on $x$ then $W(x)=Y(x)\,\one$. Hence a non-constant $W(x)$ certifies at least one error, and a constant $W(x)$ means either every view is correct or every view is wrong.
+\end{lemma}
+
+Define the unanimous strata $U^{\pm}=\{x:W(x)=\pm\one\}$ and the \emph{blind false accepts} $B^+=\Up\cap\{Y=-1\}=\{x: Y(x)=-1,\ \varepsilon(x)\equiv 1\}$. A gate is a set $A\subseteq\{\pm1\}^{\cV}$ of accepted patterns; we assume $+\one\in A$ and $-\one\notin A$. The estimands are the false-accept mass $\mathrm{FA}(A)=q(Y=-1,\,W\in A)$ and the precision $q(Y=+1\mid W\in A)$.
+
+\begin{lemma}[Monotonicity in the view set]\label{lem:mono}\status{proved}
+If $\cV\subseteq\cV'$ then $U^+_{\cV'}\subseteq U^+_{\cV}$ and $B^+_{\cV'}\subseteq B^+_{\cV}$, so $q(B^+)$ is non-increasing as verifiers or checks are added, with $q$ held fixed. The decrease equals the mass of items in $B^+_{\cV}$ on which some added view is correct.
+\end{lemma}
+\begin{proof}
+Unanimity over $\cV'$ implies unanimity over $\cV$. Every view in $\cV'$ being wrong implies every view in $\cV$ is wrong.
+\end{proof}
+
+\begin{example}[Which mechanisms a check can see]
+(a)~\emph{Order swap vs.\ position bias.} Let $x=(A,B)$ with $Y=+1$ iff the first item is better, and $\tau x=(B,A)$, so $s_\tau=-1$. A judge that always prefers the first position has $V\equiv+1$, giving $W_{\mathrm{id}}=+1$ and $W_\tau=-1$. The pattern is non-constant on every item, so the mechanism is always visible.
+(b)~\emph{Negation vs.\ a belief error.} Let $x$ be a claim $c$ and $\tau c=\neg c$, so $s_\tau=-1$. A verifier with a consistent but wrong belief $\beta(c)$ answers $V(c)=\beta(c)$ and $V(\neg c)=-\beta(c)$, giving $W_\tau=\beta(c)=W_{\mathrm{id}}$. The error transforms exactly as the truth does and is invisible to negation; paraphrase fails for the same reason.
+(c)~\emph{Refactoring vs.\ a test-coverage gap.} A semantics-preserving refactor of a candidate program leaves a gap in a fixed test suite untouched, so the gap stays blind. A second test suite that covers the gap is a new \emph{verifier}, not a new check, and makes the gap visible.
+\end{example}
+
+Table~\ref{tab:mech} records the pattern; logical-consistency checks on superhuman models \cite{fluri2023} are instances of label relations of this kind. The plate analogy is exact at this level: a twisted plate passes every face-to-face comparison, and only rotating by $90^\circ$, a check under which twist changes sign while flatness does not, reveals it.
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.30\linewidth}>{\raggedright\arraybackslash}p{0.39\linewidth}>{\raggedright\arraybackslash}p{0.24\linewidth}@{}}
+\toprule
+Mechanism & Check or verifier added & Status\\
+\midrule
+Position bias in pairwise judging & order swap ($s=-1$) & visible\\
+Verbosity or format bias & length- or format-matched paraphrase ($s=+1$) & visible if the cue is removed\\
+Self-preference & style transfer or authorship masking ($s=+1$) & visible if the cue is removed\\
+Consistent content or belief error & paraphrase ($s=+1$), negation ($s=-1$) & blind\\
+Test-coverage gap & semantics-preserving refactor ($s=+1$) & blind\\
+Test-coverage gap & independent test suite (new verifier) & visible on covered faults\\
+\bottomrule
+\end{tabular}
+\caption{A mechanism is blind to a check set exactly when its normalized response is constant across the checks, i.e.\ it transforms like the truth.}
+\label{tab:mech}
+\end{table}
+
+%======================================================================
+\section{Identification}
+
+\begin{definition}[Dawid--Skene with unanimous atoms, DSA]
+A latent type $H\in\{0,E^+,E^-,B^+,B^-\}$ has probabilities $\lambda_0,\lambda_{E+},\lambda_{E-},\lambda_{B+},\lambda_{B-}$.
+Given $H=0$: $P(Y=+1\mid H=0)=\rho$, and the views $W_v$ are conditionally independent given $Y$ \cite{dawid1979} with accuracies $\alpha_v^{y}=P(W_v=Y\mid Y=y,H=0)$.
+The atoms are: $E^+$ with $Y=+1$, $W=+\one$ (easy positive); $E^-$ with $Y=-1$, $W=-\one$ (easy negative); $B^+$ with $Y=-1$, $W=+\one$ (blind false accept); $B^-$ with $Y=+1$, $W=-\one$ (blind false reject).
+Write $c_+=\lambda_0\rho$ and $c_-=\lambda_0(1-\rho)$.
+\end{definition}
+
+Easy items are ubiquitous in practice, and their absence from classical Dawid--Skene is a known source of misfit (item difficulty induces correlated correctness). The observed law is
+\begin{equation}\label{eq:law}
+p(w)=c_+\!\prod_v P_v(w_v\mid +)+c_-\!\prod_v P_v(w_v\mid -)+S_+\,\mathbb{I}\{w=+\one\}+S_-\,\mathbb{I}\{w=-\one\},
+\end{equation}
+where $S_+=\lambda_{E+}+\lambda_{B+}$ and $S_-=\lambda_{E-}+\lambda_{B-}$. The atom weights enter only through these sums.
+
+\begin{proposition}[Sharp non-identification of blind mass]\label{prop:nonid}\status{proved}
+For any parameter of the DSA model and any $t\in[0,S_+]$, replacing $(\lambda_{E+},\lambda_{B+})$ by $(S_+-t,\,t)$ leaves the law of $W$ unchanged. Hence, whenever the Dawid--Skene component is identified, the identified set for $\lambda_{B+}$ is exactly $[0,S_+]$. More generally, in any model class closed under transferring mass between the types $(Y=+1,W=+\one)$ and $(Y=-1,W=+\one)$, $\lambda_{B+}$ is not point-identified from the law of $W$ (in the sense of partial identification \cite{manski2003}).
+\end{proposition}
+\begin{proof}
+By \eqref{eq:law}, $p$ depends on $(\lambda_{E+},\lambda_{B+})$ only through $S_+$, and every $t\in[0,S_+]$ gives valid nonnegative weights. The general statement uses only the transfer closure.
+\end{proof}
+
+\begin{proposition}[Identification of the rest]\label{prop:id}\status{numerical evidence; conjecture for a proof}
+In the DSA model with $|\cV|\ge 4$ conditionally independent views and generic parameters with all accuracies in $(1/2,1)$, the Dawid--Skene component $(c_+,c_-,\{\alpha_v^{\pm}\})$ is identified from the law of $W$ restricted to non-unanimous patterns. Consequently $S_+$ and $S_-$ are identified. For $|\cV|=3$ this fails.
+\end{proposition}
+
+\noindent\emph{Evidence.} The off-atom map has $2+2|\cV|$ parameters and $2^{|\cV|}-2$ equations. Table~\ref{tab:rank} reports the Jacobian rank at 20 random parameter points per size. At $|\cV|=3$ the rank is 6 against 8 parameters, so the DS component lies on a two-dimensional set of observationally equivalent parameters. From $|\cV|=4$ the rank is full. In a global check at $|\cV|\in\{4,5\}$, all 300 random restarts of constrained least squares (accuracies $>1/2$) reached an exact fit, and every fit returned the true parameters to within $2\times10^{-12}$. Classical Dawid--Skene with three views is locally identified (rank 7 of 7), so \emph{the unanimous atoms cost exactly one view.}
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Model & $|\cV|$ & parameters & independent equations & Jacobian rank\\
+\midrule
+Classical Dawid--Skene (full law) & 3 & 7 & 7 & 7\\
+DSA, off-atom law & 3 & 8 & 6 & 6\\
+DSA, off-atom law & 4 & 10 & 14 & 10\\
+DSA, off-atom law & 5 & 12 & 30 & 12\\
+DSA, off-atom law & 6 & 14 & 62 & 14\\
+\bottomrule
+\end{tabular}
+\caption{Generic local identifiability. Ranks were identical (min $=$ max) across 20 random parameter points per row.}
+\label{tab:rank}
+\end{table}
+
+\begin{corollary}[Identified set for precision]\label{cor:prec}\status{proved, given Proposition~\ref{prop:id}}
+For a gate $A$ with $+\one\in A$, let $\mathrm{TP}_{\mathrm{DS}}(A)=c_+\sum_{w\in A}\prod_v P_v(w_v\mid+)$. The precision of $A$ lies in
+$\bigl[\,\mathrm{TP}_{\mathrm{DS}}(A)/p(A),\ (\mathrm{TP}_{\mathrm{DS}}(A)+S_+)/p(A)\,\bigr]$, and every point of this interval is attained. Its width $S_+/p(A)$ does not shrink with more data.
+\end{corollary}
+
+\begin{remark}
+The width is $P(E^+\cup B^+\mid A)\ge P(B^+\mid A)$, not $\le P(B^+\mid A)$: the uncertainty spans the whole unanimous atom, because unanimous \emph{correct} accepts and unanimous \emph{wrong} accepts are observationally identical. Equality with $P(B\mid A)$ holds only when there are no easy positives. The width is an equality rather than a bound within the DSA model because every split in $[0,S_+]$ is attained (Proposition~\ref{prop:nonid}); in a larger model class in which the DS component is itself only partially identified, it becomes a lower bound on the width.
+\end{remark}
+
+\begin{proposition}[The ensemble limit]\label{prop:limit}\status{proved}
+Consider DSA models with a growing number $|\cV|$ of conditionally independent views whose accuracies lie in $[\underline\alpha,\overline\alpha]\subset(1/2,1)$, with the other parameters fixed. Then:
+(a)~every gate containing $+\one$ has $\mathrm{FA}(A)\ge\lambda_{B+}$ for all $|\cV|$;
+(b)~the majority gate has $\mathrm{FA}\to\lambda_{B+}$ and precision $\to(c_++\lambda_{E+})/(c_++S_+)$;
+(c)~the unanimity gate has recall $\to\lambda_{E+}/(c_++\lambda_{E+}+\lambda_{B-})$ and identified-set width $\to 1$.
+Adding conditionally independent views therefore drives the false-accept mass to exactly the quantity that Proposition~\ref{prop:nonid} shows agreement cannot measure.
+\end{proposition}
+\begin{proof}
+(a)~Blind false accepts have $W=+\one\in A$. (b)~By Hoeffding, the majority of $|\cV|$ independent views errs on a DS item with probability at most $\exp(-2|\cV|(\underline\alpha-\tfrac12)^2)\to0$. (c)~A DS item is unanimous with probability at most $\overline\alpha^{|\cV|}+(1-\underline\alpha)^{|\cV|}\to0$, so $p(\Up)\to S_+$ while $\mathrm{TP}_{\mathrm{DS}}\to0$.
+\end{proof}
+
+This formalizes ``more inspectors of the same kind cannot remove a shared blind spot.'' Lemma~\ref{lem:mono} identifies the only lever on the floor: add checks or verifiers under which a mechanism's items stop being unanimous. Figure~\ref{fig:gate}(a) illustrates both effects.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{fig_gate_v01b.pdf}
+\caption{DSA model with $\lambda_{E+}=0.09$, $c_+=0.21$, $\lambda_{E-}=\lambda_{B-}=0$, $c_-$ taking the remaining mass, all accuracies $0.85$, and majority gating with odd $|\cV|$.
+(a)~False-accept mass falls to the floor $\lambda_{B+}$. A detecting transformation moves part of the blind mass into the visible Dawid--Skene component and lowers the floor.
+(b)~With $\lambda_{B+}=0.035$: the identified set for precision from agreement data alone (shaded, Corollary~\ref{cor:prec}) against an illustrative 95\% Clopper--Pearson interval for an audit of 200 gold labels drawn uniformly from $\Up$ (Lemma~\ref{lem:audit}); the plotted count is the rounded model-expected number of false accepts and the DS component is treated as known.}
+\label{fig:gate}
+\end{figure}
+
+%======================================================================
+\section{Where gold labels are informative}
+
+\begin{lemma}[Audit where every check agrees]\label{lem:audit}\status{proved under DSA with known DS component}
+For a gate $A\ni+\one$,
+\[
+\mathrm{FA}(A)=\underbrace{c_-\!\!\sum_{w\in A\setminus\{+\one\}}\prod_v P_v(w_v\mid -)}_{\text{identified}}\;+\;p(\Up)\,r,\qquad r=P(Y=-1\mid W=+\one).
+\]
+The likelihood of gold labels drawn from $\{W\neq+\one\}$ is invariant under the transfer in Proposition~\ref{prop:nonid}, so such labels carry no information about $r$ beyond the law of $W$. With $n$ labels drawn uniformly from $\Up$ and $k$ observed false accepts,
+$\mathrm{FA}(A)\le(\text{identified term})+p(\Up)\,\CPup_\alpha(k,n)$ with probability at least $1-\alpha$, where $\CPup_\alpha$ is the Clopper--Pearson upper bound \cite{clopper1934}.
+\end{lemma}
+\begin{proof}
+Off $+\one$, the joint law of $(Y,W)$ involves only DS parameters, which do not change under the transfer. The bound is the exact binomial interval for $r$, scaled by $p(\Up)$, which is observed.
+\end{proof}
+
+\begin{remark}
+Sampling labels uniformly from $A$ instead inflates the variance of the unidentified term by a factor of about $p(A)/p(\Up)$ when $r$ is small. Routing \emph{disagreements} to human review, the common practice, measures only the identified term. It is useful for checking the model and uninformative about blind mass. A robust design puts most labels in $\Up$ and a small allocation outside it for model checking; the finite-sample theory with an estimated DS component is open (Section~\ref{sec:open}).
+\end{remark}
+
+%======================================================================
+\section{Link to the loop and to P2}\label{sec:dynamics}
+
+In a loop every quantity carries the index $t$: $q_t$, $U^+_t$, and $\lambda_{B+}(t)=q_t(B^+)$. Three consequences follow.
+(1)~Audit samples must be redrawn from the current generation's $U^+_t$, because selection changes $q_t$. Reusing a fixed anchor measures the anchor's distribution, not the loop's; this is the second weakness we expect in anchor-gated evaluator promotion \cite{rqgm2026}, and the survey \cite{duan2026} lists detecting coordinated proposer--evaluator errors as open.
+(2)~Repeatedly querying audited labels across generations is adaptive data reuse, which is P3's problem.
+(3)~P2's \emph{zero-drift} condition, $p_G(Q^*)\Delta_+=p_B\Delta_-+(\alpha_D/a)\,p_D\Delta_-$, has as its central parameter the rate at which the proposer supplies blind modifications, $p_B\propto\lambda_{B+}(t)$. The condition sets $E[\Delta Q\mid Q^*]=0$; it is not a fixed point of a map, and zero expected drift implies neither convergence nor stability. The equilibrium may be unstable, the true quality may random-walk or decline around it, and the measured curve may keep rising throughout, which is the divergence P2 tests. Lemma~\ref{lem:audit} makes that rate estimable with a certified bound in every generation, which is what lets P2's plateau predictions be preregistered and falsified.
+
+%======================================================================
+\section{Not yet handled}\label{sec:open}
+
+\begin{enumerate}
+\item \textbf{Dependence among views.} Views that share a verifier, or share a transformation, are not conditionally independent given $Y$. Proposition~\ref{prop:id} counts conditionally independent views; the realistic model is hierarchical, with a verifier-level latent and transformation-level perturbations. Identification in that model is the main theory task.
+\item \textbf{Stochastic mechanisms and group structure.} See Conjecture~\ref{conj:char}.
+\item \textbf{Imperfect label relations.} A paraphrase can change meaning. If $s_\tau$ is wrong with probability $\eta_\tau$, relation errors must be separated from verifier errors.
+\item \textbf{Finite samples.} Rates for estimating $S_+$ and for the combined bound when the DS component is estimated rather than known.
+\item \textbf{Graded truth.} Improvements are rarely binary; the ordinal or continuous extension is needed for real loops.
+\end{enumerate}
+
+\begin{conjecture}[Character decomposition]\label{conj:char}\status{conjecture}
+Suppose $T$ generates a finite abelian group $G$ acting on candidates, with label character $s:G\to\{\pm1\}$. For a mechanism type $\kappa$, let $m_\kappa(g)=E[W_{(j,g)}\mid\kappa]$ be its mean normalized response. Then, in a model where items of the same type are exchangeable, the projection of $m_\kappa$ onto the constant function on $G$ is not identified from agreement data, while its projections onto the non-trivial characters of $G$ are identified. $T$ detects $\kappa$ if and only if $m_\kappa$ is non-constant on $G$. For deterministic $\pm1$ responses this reduces to Lemma~\ref{lem:mono}; the saddle-shaped plate is the case where the $90^\circ$ rotation supplies the needed character.
+\end{conjecture}
+
+%======================================================================
+\section{Questions for a statistician}
+
+\begin{enumerate}
+\item Is the four-view threshold for Dawid--Skene with point masses at the unanimous patterns already known, for example in latent class models with degenerate components or item-difficulty models \cite{whitehill2009,allman2009}? Does a proof follow directly from Kruskal-type results \cite{kruskal1977}?
+\item Is Proposition~\ref{prop:nonid} the same phenomenon as existing results on estimating accuracy without labels and on non-identification for correlated annotators and judges \cite{platanios2014,jaffe2016,arxiv260908826}, stated in a different parametrization? What, if anything, does the atom formulation add?
+\item Are designed transformations with known label relations already treated as an identification strategy in the measurement-error literature (repeated indicators, Kotlarski-type arguments \cite{livuong1998}) or in metrology error separation \cite{donaldson1972,evans1996}? Is Conjecture~\ref{conj:char} known in either?
+\item What is the right finite-sample tool for combining a model-identified component with an audited stratum under a moving distribution: stratified prediction-powered inference \cite{angelopoulos2023}, or something else?
+\end{enumerate}
+
+\begin{thebibliography}{99}\footnotesize\setlength{\itemsep}{0pt}
+\bibitem{allman2009} E.~Allman, C.~Matias, J.~Rhodes. Identifiability of parameters in latent structure models with many observed variables. \emph{Annals of Statistics}, 2009.
+\bibitem{angelopoulos2023} A.~Angelopoulos, S.~Bates, C.~Fannjiang, M.~Jordan, T.~Zrnic. Prediction-powered inference. \emph{Science}, 2023.
+\bibitem{arxiv260908826} V.~K.~Sunkavalli. A closed-form estimator and diagnostic battery for anchor-judge error correlation, under a single-common-factor model. arXiv:2609.08826, 2026.
+\bibitem{clopper1934} C.~Clopper, E.~Pearson. The use of confidence or fiducial limits illustrated in the case of the binomial. \emph{Biometrika}, 1934.
+\bibitem{dawid1979} A.~Dawid, A.~Skene. Maximum likelihood estimation of observer error-rates using the EM algorithm. \emph{Applied Statistics}, 1979.
+\bibitem{donaldson1972} R.~Donaldson. A simple method for separating spindle error from test ball roundness error. \emph{CIRP Annals}, 1972.
+\bibitem{duan2026} Y.~Duan et al. The last AI built by humans: Toward genuine recursive self-improvement. arXiv:2609.11873, 2026.
+\bibitem{evans1996} C.~Evans, R.~Hocken, W.~Estler. Self-calibration: reversal, redundancy, error separation, and ``absolute testing.'' \emph{CIRP Annals}, 1996.
+\bibitem{fluri2023} L.~Fluri, D.~Paleka, F.~Tram\`er. Evaluating superhuman models with consistency checks. arXiv:2306.09983, 2023 (NeurIPS 2023 SoLaR workshop). \emph{Verified.}
+\bibitem{jaffe2016} A.~Jaffe, E.~Fetaya, B.~Nadler, T.~Jiang, Y.~Kluger. Unsupervised ensemble learning with dependent classifiers. \emph{AISTATS}, 2016.
+\bibitem{kruskal1977} J.~Kruskal. Three-way arrays: rank and uniqueness of trilinear decompositions. \emph{Linear Algebra and its Applications}, 1977.
+\bibitem{livuong1998} T.~Li, Q.~Vuong. Nonparametric estimation of the measurement error model using multiple indicators. \emph{Journal of Multivariate Analysis}, 1998.
+\bibitem{manski2003} C.~Manski. \emph{Partial Identification of Probability Distributions}. Springer, 2003.
+\bibitem{platanios2014} E.~Platanios, A.~Blum, T.~Mitchell. Estimating accuracy from unlabeled data. \emph{UAI}, 2014.
+\bibitem{rqgm2026} The Red Queen G\"odel Machine: Co-evolving agents and their evaluators. arXiv:2606.26294, 2026.
+\bibitem{whitehill2009} J.~Whitehill, P.~Ruvolo, T.~Wu, J.~Bergsma, J.~Movellan. Whose vote should count more: Optimal integration of labels from labelers of unknown expertise. \emph{NeurIPS}, 2009.
+\end{thebibliography}
+
+\end{document}
