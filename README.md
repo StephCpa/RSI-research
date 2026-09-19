@@ -29,4 +29,5 @@ make paper
 
 ## License
 
-MIT; see `LICENSE`.
+- Software/code (including `P1/proofs/`, `P1/experiments/`, build scripts): MIT; see the repository-root `LICENSE`.
+- Manuscript and research notes: CC BY 4.0; see `P1/manuscript/LICENSE` and `P1/notes/LICENSE`.
