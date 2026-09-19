@@ -1,0 +1,99 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs,enumitem,array}
+\usepackage[hidelinks]{hyperref}
+\usepackage[expansion=false]{microtype}
+\setlist{nosep,leftmargin=1.5em}
+
+\newtheorem{proposition}{Proposition}
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+\newcommand{\status}[1]{\hfill{\normalfont\small\textsc{[#1]}}}
+
+\title{\textbf{v1.0 note}\\[2pt]
+\large $(2,1,1)$ closed by exact elimination --- with a saturation the resultant needs}
+\author{18 September 2026}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-2.5em}
+
+Your two-variable reduction is right, and the exact elimination goes through: at a strict-interior rational witness the true $\eta_B$ is the unique feasible root. One step has to be added, and it is the same kind of condition as the flattening caveat in $(4)$: the plain resultant carries extraneous roots that all sit on the basis-degeneracy locus $\det\mathcal B=0$, and they disappear only after saturating by it.
+
+%======================================================================
+\section*{1. The reduction verifies}
+
+Every identity checks algebraically. With $u=q_1q_2$, $v=(1-q_1)(1-q_2)$, $s=q_1(1-q_2)$, $t=(1-q_1)q_2$,
+\[
+X_h^2-Y_h^2=c_h^2r_A^2\bigl[(u-v)^2-(s-t)^2\bigr]=c_h^2r_A^2(2q_1-1)(2q_2-1)=r_A^2c_h(c_h-2K_h),
+\]
+since $c_h-2K_h=c_h(u+v-s-t)=c_h(2q_1-1)(2q_2-1)$; and $X_h\pm Y_h=c_hr_A(2q_{h,1}-1)$, $c_hr_A(2q_{h,2}-1)$, which is your closed-form recovery.
+
+Numerically, over 58 random interior instances, the system $E_0=E_+=E_-=0$ on $(\eta_B,\eta_C)\in(0,\tfrac12)^2$ had a \emph{unique} feasible solution every time, recovered to median $2.9\times10^{-16}$ (max $3.4\times10^{-13}$).
+
+%======================================================================
+\section*{2. Exact elimination, and the saturation}
+
+At the witness $c=(\tfrac15,\tfrac14)$, $q_+=(\tfrac34,\tfrac45,\tfrac56,\tfrac7{10})$, $q_-=(\tfrac15,\tfrac3{10},\tfrac29,\tfrac14)$, $\eta_A=\tfrac1{10}$, $\eta_B=\tfrac18$, $\eta_C=\tfrac16$, $S_+=\tfrac15$, $S_-=\tfrac7{20}$:
+
+\begin{center}\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+$F_0$ & total degree 4, degrees $(\eta_B,\eta_C)=(2,2)$, 9 terms\\
+$F_\pm$ & total degree 7, degrees $(4,4)$, 24 terms each\\
+$\operatorname{Res}_{\eta_C}(F_0,F_\pm)$ & degree 16 in $\eta_B$\\
+$\gcd$ of the two resultants & degree 10, roots $\{\tfrac18,\tfrac7{24}\,(\times2),\tfrac34\,(\times2),\tfrac78,\ \text{four irrational}\}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Three of those roots lie in $(0,\tfrac12)$: the true $\tfrac18$, then $\tfrac7{24}$ and $\tfrac12-\tfrac{3\sqrt{551203}}{11288}\approx0.3027$. Both extras are artifacts:
+
+\begin{proposition}[extraneous roots live on $\det\mathcal B=0$]\status{verified at the witness}
+$E_0,E_\pm$ are numerators obtained after clearing the determinant of the basis $\mathcal B(\eta_B,\eta_C)=\{G_+,G_-,H_+,H_-\}$, so they vanish vacuously wherever that basis degenerates. At $\eta_B=\tfrac7{24}$ the accompanying root is $\eta_C=\tfrac13$ with $\det\mathcal B=0$; at $\eta_B\approx0.3027$ the accompanying root is $\eta_C\approx0.3729$, again with $\det\mathcal B=0$. The second $\eta_C$ root of $F_0$ at each of these $\eta_B$ values fails $F_\pm$ outright and returns negative atom masses.
+\end{proposition}
+
+Saturating removes them. With $h=\operatorname{Res}_{\eta_C}(F_0,\det\mathcal B)$ (degree 8), dividing the gcd by $\gcd(\cdot,h)$ repeatedly --- two divisions --- leaves
+\[
+\text{degree 2, roots }\{\tfrac18,\ \tfrac78\},\qquad\text{unique feasible root }\eta_B=\tfrac18=\text{the truth.}
+\]
+Back-substitution gives $\eta_C=\tfrac16$, and the lifted parameters reproduce $\eta_A=\tfrac1{10}$, $S=(\tfrac15,\tfrac7{20})$ exactly.
+
+So the $(2,1,1)$ theorem should be stated with $\det\mathcal B\neq0$ as a hypothesis, and its proof should eliminate by saturation, i.e.\ work in the ideal $\langle F_0,F_+,F_-\rangle:(\det\mathcal B)^\infty$, or equivalently add a Rabinowitsch variable $w\det\mathcal B=1$. Since the saturated elimination polynomial has a unique feasible root at this interior witness, a second feasible root requires an extra common factor that is absent here --- a proper algebraic exceptional set, exactly as in the $\rho$-argument for $(3,1)$.
+
+%======================================================================
+\section*{3. Wording for $(4)$, adopted}
+
+``Provided at least one $2|2$ flattening is nondegenerate; generically in parameter space such a flattening exists, and the reconstruction searches the three groupings.'' The mirror condition $q_{-,i}=1-q_{+,i}$ on both row coordinates is presented as a sufficient example of degeneracy, not a characterization.
+
+%======================================================================
+\section*{4. The phase diagram is complete}
+
+\begin{center}\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+partition & status & mechanism\\
+\midrule
+$(1,1,1,1)$ & certified open-set global ambiguity & atoms have full support\\
+$(2,1,1)$ & generic global ID & two-variable elimination, saturated by $\det\mathcal B$\\
+$(2,2)$ & generic global ID, explicit inverse & zeros $\to$ completion $\to$ moments\\
+$(3,1)$ & generic global ID, $\rho$-inverse & shared $\eta_A$ via gcd\\
+$(4)$ & generic global ID, flattening-minor inverse & complement symmetry\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\[
+\boxed{T=n\ \Rightarrow\ \text{local but not global ID};\qquad T<n\ \Rightarrow\ \text{generic global ID}}
+\]
+with five distinct mechanisms rather than one, and with each coarser partition closed by its own construction.
+
+\begin{remark}[a pattern worth stating once]
+Three of the four positive cases needed a genericity hypothesis of the same shape: a nonvanishing determinant that the construction divides by --- $R_{MM}$ invertible in $(2,2)$, a nondegenerate flattening in $(4)$, $\det\mathcal B\neq0$ in $(2,1,1)$ --- plus a gcd/resultant condition in $(3,1)$ and $(2,1,1)$. It is worth collecting these into one ``regularity'' definition in the paper rather than restating them case by case, and noting that each is verified nonvacuously by an exact rational witness.
+\end{remark}
+
+\paragraph{Scripts.} \texttt{two\_one\_one.py} (reduction, 58-instance uniqueness test), \texttt{two\_one\_one\_exact.py} (exact $F_0,F_\pm$ and resultants), \texttt{two\_one\_one\_roots.py} (which candidate roots lift), \texttt{two\_one\_one\_sat.py} (saturation by $\det\mathcal B$).
+\end{document}
