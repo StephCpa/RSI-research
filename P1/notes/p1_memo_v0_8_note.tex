@@ -1,0 +1,108 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs,enumitem,array}
+\usepackage[hidelinks]{hyperref}
+\usepackage[expansion=false]{microtype}
+\setlist{nosep,leftmargin=1.5em}
+
+\newtheorem{proposition}{Proposition}
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+\newcommand{\status}[1]{\hfill{\normalfont\small\textsc{[#1]}}}
+\newcommand{\N}{\mathcal{N}_3}
+
+\title{\textbf{v0.8 note}\\[2pt]
+\large The sign conjecture is wrong, the $\rho$ route checks out,\\ and $(4)$ wants differences rather than even moments}
+\author{18 September 2026}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-2.5em}
+
+You are right and my v0.7 remark was wrong: positivity and orientation do not rule out the spurious roots. The $\rho$ route works and is cleaner than the quartic, and your exact witness reproduces. On $(4)$, the parity structure and the completion relations verify exactly, but the first step you proposed does not: the even moments alone cannot determine $u$. Differencing them can.
+
+%======================================================================
+\section*{1. Retraction: the sign conjecture}
+
+Across 300 random $(3,1)$ instances I collected every spurious quartic root that yields a positive vector: 131 of them. Of those, \textbf{25 passed} the test ``all recovered $q$ on one side of $1/2$''. So positivity plus orientation leaves spurious candidates alive, and what kills them is the shared $\eta_A$, exactly as you say. The v0.7 remark should be deleted rather than weakened.
+
+%======================================================================
+\section*{2. The $\rho$ route verifies}
+
+Implemented as you specify: build $A=d_1^2-d_2^2$, $B=s_1^2-s_2^2$, $C=d_1^2-d_3^2$, $D=s_1^2-s_3^2$ as binary quadratics on the line $L$, then solve $(\mathbf a-\rho\mathbf b)\times(\mathbf c-\rho\mathbf d)=\mathbf0$, three quadratics in $\rho$. Over 295 valid random instances:
+
+\begin{center}\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+common roots $\rho\in(0,1)$ per instance & exactly 1, in 295 of 295\\
+$|\hat\eta_A-\eta_A|$ from $\eta_A=(1-\sqrt{\rho})/2$ & median $2.1\times10^{-16}$, max $3.8\times10^{-13}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Exact witness reproduced.} With the two true rays as the basis of $L$ at $q_+=(\frac34,\frac45,\frac23)$, $q_-=(\frac14,\frac15,\frac3{10})$, $\eta_A=\frac1{10}$, exact rational arithmetic gives three quadratics in $\rho$ whose exact roots are
+\[
+\Bigl\{\tfrac{16}{25},-\tfrac{16}{25}\Bigr\},\qquad
+\Bigl\{\tfrac{16}{25}\ \text{(double)}\Bigr\},\qquad
+\Bigl\{\tfrac{16}{25},-\tfrac{16}{25}\Bigr\},
+\]
+so the gcd is $25\rho-16$ and the common root is unique --- and the spurious $-16/25$ is outside $(0,1)$ in any case. My constants differ from yours because the basis is scaled differently; the factor structure is identical.
+
+Adopting the $\rho$ route as the algorithm also removes the two artifacts I would otherwise have to defend: \texttt{polyfit} and the affine chart's point at infinity. The quartic stays in the paper as the geometric picture --- a generic secant line meets the model's quartic hypersurface in four points, and only the generating pair shares the block's relation-noise parameter --- which is also why four real roots show up every time.
+
+So the $(3,1)$ row becomes \emph{generic global identifiability, constructive algebraic inverse}, once the resultant/gcd genericity argument is written out.
+
+%======================================================================
+\section*{3. $(4)$: the parity structure is right, the first step is not}
+
+Both of your structural claims verify to machine precision on random instances: the parity identity $E[\prod_{i\in A}X_i\mid h]=r^{[|A|\ \mathrm{odd}]}\prod_{i\in A}m_{h,i}$ holds to $7\times10^{-17}$, and the completion relations $M_A=\widetilde M_A+u$ (even), $M_A=\widetilde M_A+v$ (odd) to $6\times10^{-17}$.
+
+\begin{proposition}[the even moments do not determine $u$]\status{numerical, with a dimension argument}
+The even system has 8 equations ($M_\emptyset$, six pairs, one quadruple) in 11 unknowns ($c_\pm$, eight $m_{h,i}$, and $u$), so a 3-dimensional solution family is expected. Numerically, fitting $(c,m)$ to the even equations at $u=u_{\text{true}}+\delta$ for $\delta\in\{0,\pm0.02,\pm0.05,\pm0.10\}$ gives a maximum residual of $5.6\times10^{-17}$ at \emph{every} tested $\delta$.
+\end{proposition}
+
+The structural reason is worth stating in the paper: the six pair moments are the off-diagonal entries of the $4\times4$ symmetric rank-2 matrix $GG^\top$ with $G=[\sqrt{c_+}m_+,\ \sqrt{c_-}m_-]$, whose diagonal is unobserved. A generic $4\times2$ factor carries $8-1=7$ effective parameters against 6 off-diagonal entries, so every off-diagonal vector is attainable and a uniform shift by $u$ never leaves the variety. Adding $M_\emptyset$ and $M_{1234}$ still leaves 8 equations for 11 unknowns.
+
+\paragraph{The fix: difference out both nuisance scalars first.} $u$ shifts all even moments equally and $v$ shifts all odd moments equally, so differences within each parity class are directly observable:
+\[
+\widetilde M_A-\widetilde M_{A'}=M_A-M_{A'}\quad (|A|,|A'|\ \text{same parity}).
+\]
+That gives $7+7=14$ shift-invariant equations in the 11 DS unknowns $(c_\pm,m,r)$, with $r$ entering only as a common factor on the odd class. The count matches the earlier finding that the atom-free map for $(4)$ has rank $11/11$: the 14 atom-free cells carry exactly these 14 differences. Once $(c,m,r)$ is solved, everything else is closed form:
+\[
+u=(c_++c_-)-\widetilde M_\emptyset,\qquad
+v=r\!\sum_h c_h m_{h,i}-\widetilde M_{\{i\}},\qquad
+\eta=\tfrac{1-r}2,
+\]
+and the two atom masses follow from the two observed corners minus their DS parts, inverting $\bigl[\begin{smallmatrix}1-\eta&\eta\\ \eta&1-\eta\end{smallmatrix}\bigr]$.
+
+Numerically the difference system behaves: constrained multistart (80 starts per instance, label swap quotiented) returned a single feasible solution equal to the truth in each of 4 random instances.
+
+\begin{remark}[what to prove for $(4)$]
+Global identifiability for $(4)$ is now the statement that the 14-difference system has a unique feasible solution off a proper algebraic set. The parity split is what makes it plausible: the even differences constrain $(c,m)$ alone, and the odd differences repeat the same $(c,m)$ structure scaled by a single unknown $r$, so the odd class supplies 7 equations for 1 new unknown. Eliminating $r$ by ratios of odd differences gives 6 equations in $(c,m)$ on top of the 7 even ones --- 13 equations for 10 unknowns, which is where a resultant argument should start.
+\end{remark}
+
+%======================================================================
+\section*{4. Phase diagram}
+
+\begin{center}\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+partition & status & remaining\\
+\midrule
+$(1,1,1,1)$ & globally ambiguous on an open set & --- (certified)\\
+$(2,2)$ & generic global ID, explicit inverse & write-up\\
+$(3,1,1)$, $n=5$ & generic global ID, constructive & name the exceptional sets\\
+$(2,1,1)$ & restricted tensor $+$ size-2 inversion & small algebra\\
+$(3,1)$ & generic global ID, algebraic inverse via $\rho$ & write out the gcd genericity\\
+$(4)$ & reduced to the 14-difference system & uniqueness proof\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+$(4)$ is no longer black-box in the sense of lacking structure; it is a specific polynomial-uniqueness question in 11 unknowns with a clean parity split. I would still put it last, and I would not start it with further multistart runs.
+
+\paragraph{Scripts.} \texttt{rho\_route.py} (the $\rho$ system, 300-instance test, spurious-root audit), \texttt{rho\_exact.py} (exact rational witness, gcd $25\rho-16$), \texttt{four\_moments.py} (parity and completion checks, the $u$-freedom experiment, the difference-system test).
+\end{document}
