@@ -73,3 +73,43 @@ This produces the three preregistered panels: blind error in the unanimous
 stratum, agreement-only blind-mass identified set versus the audited interval,
 and interval width versus gold budget for unanimous, uniform, and
 disagreement-only allocation.
+
+
+## 5. Gold-blind diagnostics
+
+Before any hidden/gold suite is run, analyze the fixed first cohort:
+
+```bash
+python P1/experiments/audit_goldblind.py path/to/views_only.csv
+```
+
+The input must not contain a `truth` column. The script writes `u0/u1`, the
+preregistered budget-panel prominence gate, marginal acceptance rates, and
+pairwise agreement/phi matrices overall and conditional on visible-test pass.
+
+## 6. Revised audit inference
+
+The current preregistration is `audit_prereg_v0_2.md`. It supersedes v0.1
+before freeze. Population uncertainty is problem-cluster bootstrap; the
+Clopper-Pearson interval is retained only as a fixed-pool certification
+sensitivity. The primary transformation statistic is `r0-r1`, not
+`delta_b`.
+
+## 7. Coverage and controlled degeneracy
+
+```bash
+make coverage-quick
+make degeneracy-quick
+```
+
+The final versions are:
+
+```bash
+make coverage
+make degeneracy
+```
+
+`regularity_normalization.md` freezes every normalization used in the
+conditioning plots. `finite_sample_prereg_v0_1.md` freezes the restart grid,
+the free `beta_N` scaling regression, the coverage design, and the controlled
+paths toward the algebraic degeneracy sets.
