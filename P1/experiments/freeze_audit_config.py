@@ -15,12 +15,14 @@ import hashlib, json, sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-EXPECTED_PROTOCOL = "audit_prereg_v0_2"
+EXPECTED_PROTOCOL = "audit_prereg_v0_3"
 
 REQUIRED_PATHS = [
     ("benchmark", "name"),
     ("benchmark", "version_or_commit"),
     ("benchmark", "problem_manifest"),
+    ("benchmark", "base_test_split_seed"),
+    ("benchmark", "base_test_split_manifest"),
     ("benchmark", "visible_suite_definition"),
     ("benchmark", "gold_suite_definition"),
     ("candidate_generation", "model_ids"),
@@ -32,6 +34,10 @@ REQUIRED_PATHS = [
     ("prompts", "order_swap"),
     ("prompts", "negation"),
     ("candidate_budget",),
+    ("unanimous_target",),
+    ("practical_blind_error_bar",),
+    ("judge_quality_upper_bar",),
+    ("fixed_pool_precision_halfwidth_target",),
 ]
 
 
@@ -87,6 +93,7 @@ def main():
 
     file_keys = [
         ("benchmark", "problem_manifest"),
+        ("benchmark", "base_test_split_manifest"),
         ("prompts", "identity"),
         ("prompts", "order_swap"),
         ("prompts", "negation"),
@@ -105,7 +112,10 @@ def main():
     analysis_files = [
         HERE / "audit_analysis.py",
         HERE / "audit_goldblind.py",
-        HERE / "audit_prereg_v0_2.md",
+        HERE / "ds_excess.py",
+        HERE / "audit_allocation.py",
+        HERE / "audit_analysis_spec_v0_1.md",
+        HERE / "audit_prereg_v0_3.md",
         HERE / "freeze_audit_config.py",
     ]
     for p in analysis_files:
@@ -126,7 +136,10 @@ def main():
     print("config_sha256:", lock["config_sha256"])
     print("analysis_sha256:", hashes["audit_analysis.py"])
     print("goldblind_sha256:", hashes["audit_goldblind.py"])
-    print("prereg_sha256:", hashes["audit_prereg_v0_2.md"])
+    print("prereg_sha256:", hashes["audit_prereg_v0_3.md"])
+    print("analysis_spec_sha256:", hashes["audit_analysis_spec_v0_1.md"])
+    print("ds_excess_sha256:", hashes["ds_excess.py"])
+    print("allocation_sha256:", hashes["audit_allocation.py"])
     print("wrote:", out)
 
 
