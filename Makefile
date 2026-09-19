@@ -4,7 +4,7 @@ FIG := $(P1)/figures/fig_gate_v02.pdf
 TEX := $(P1)/manuscript/p1_manuscript_v1.tex
 PDF := $(P1)/manuscript/p1_manuscript_v1.pdf
 
-.PHONY: verify figure paper finite-sample-quick finite-sample clean
+.PHONY: verify figure paper finite-sample-quick finite-sample audit-freeze clean
 
 verify:
 	$(PYTHON) $(P1)/run_all.py
@@ -21,6 +21,9 @@ finite-sample-quick:
 
 finite-sample:
 	$(PYTHON) $(P1)/experiments/finite_sample.py
+
+audit-freeze:
+	$(PYTHON) $(P1)/experiments/freeze_audit_config.py $(P1)/experiments/audit_config.json
 
 clean:
 	rm -f $(P1)/manuscript/*.aux $(P1)/manuscript/*.log $(P1)/manuscript/*.out
