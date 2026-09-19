@@ -1,0 +1,122 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs,enumitem,array}
+\usepackage[hidelinks]{hyperref}
+\usepackage[expansion=false]{microtype}
+\setlist{nosep,leftmargin=1.5em}
+
+\newtheorem{proposition}{Proposition}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+\setcounter{lemma}{4}
+\setcounter{proposition}{3}
+\setcounter{corollary}{1}
+
+\newcommand{\status}[1]{\hfill{\normalfont\small\textsc{[#1]}}}
+\newcommand{\cV}{\mathcal{V}}
+\newcommand{\one}{\mathbf{1}}
+\newcommand{\Up}{U^{+}}
+\newcommand{\Wt}{\widetilde{W}}
+
+\title{\textbf{v0.3b patch}\\[2pt]
+\large Corrected Corollaries 2--3, and a design objective defined on reported dissent}
+\author{Replaces the corresponding parts of the v0.3 patch \textperiodcentered{} 18 September 2026}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-2.5em}
+
+\paragraph{Status.} Both objections are correct and both statements were wrong as written. Corollary~2 conflated ``the non-identification survives'' with ``the identified set is unchanged.'' Corollary~3 asserted that the DSA form survives, which it does not: relation noise disperses the atoms. The corrected versions are below, together with a numerical check of what replaces Proposition~2 in the corrupted model.
+
+%======================================================================
+\section*{Corollary 2, corrected}
+
+\begin{corollary}[The transfer non-identification is robust to label-independent corruption]\status{proved}
+Let the reported views be generated from the true views by a channel $K(\widetilde w\mid w^\star)$ with $K\perp Y\mid W^\star$. Then:
+\begin{enumerate}
+\item[(a)] the transfer $(\lambda_{E+},\lambda_{B+})\mapsto(\lambda_{E+}-t,\lambda_{B+}+t)$ leaves the reported law unchanged for every admissible $t$, so $\lambda_{B+}$ remains not point-identified;
+\item[(b)] the identified set for $\lambda_{B+}$ under the corrupted model contains the identified set under the exact model: corruption coarsens observational equivalence and can only widen identified sets;
+\item[(c)] it equals $[0,S_+]$ exactly when $S_+$ remains identified under $K$, which is an additional requirement on $K$ and not implied by (a).
+\end{enumerate}
+\end{corollary}
+\begin{proof}
+(a) The easy-positive and blind-false-accept types both have $W^\star\equiv+\one$, so pushing that point mass through $K$ gives the same reported law; the transfer moves mass between two types with identical reported laws. (b) If two parameter values induce the same exact-model law, they induce the same reported law, so equivalence classes under the reported law are unions of equivalence classes under the exact law, and projections of larger classes are larger. (c) Immediate from (a) and the definition.
+\end{proof}
+
+The distinction matters because a sufficiently destructive $K$ can cost $S_+$ as well: in the extreme where $K$ ignores $W^\star$, nothing is identified, and (a) still holds vacuously. Robust non-identifiability is not a robust identified set.
+
+%======================================================================
+\section*{Corollary 3, corrected and retitled}
+
+\begin{corollary}[Attenuation of the DS component under nondifferential relation noise]\status{proved}
+Assume relation errors act per view with rates $\eta_v$, are mutually independent across views, and are independent of verifier correctness given $(Y,H)$. Then:
+\begin{enumerate}
+\item[(a)] \emph{The DS component survives with composite accuracies.} A Dawid--Skene item's reported view accuracy is $\tilde\alpha_v=\alpha_v(1-\eta_v)+(1-\alpha_v)\eta_v$, and the DS part remains a mixture of two product distributions. $\eta_v$ is not separately identified from $\alpha_v$ within this component: only $\tilde\alpha_v$ is.
+\item[(b)] \emph{The atoms do not survive.} $E^+$ and $B^+$ both had $W^\star\equiv+\one$; after independent flips each becomes the \emph{same} product distribution with $P(\Wt_v=+1)=1-\eta_v$, and likewise $E^-,B^-$ become a product with $P(\Wt_v=+1)=\eta_v$. The reported law is therefore a four-component product mixture whose two atom-derived components are tied through $\eta$, not a DSA law.
+\item[(c)] Consequently Proposition~1 survives in the strong form --- $E^+$ and $B^+$ are literally the same component --- while Proposition~2 must be restated for the new parameterization, and Proposition~3 survives only in part: (3a) and (3c) fail, because blind items now dissent with positive probability and no longer pass a unanimity gate almost surely; (3b) survives whenever $\sup_v\eta_v<1/2$, with $\mathrm{FA}\to\lambda_{B+}$ and precision $\to(\tilde c_++\lambda_{E+})/(\tilde c_++S_+)$ for the majority gate.
+\end{enumerate}
+\end{corollary}
+\begin{proof}
+(a) is the two-state channel composition. (b) pushes the point masses through independent flips. (c): the transfer argument of Corollary~2(a) applies; for (3b), Hoeffding gives that the majority of reported views is $+1$ with probability tending to one both for DS positives (accuracies $\tilde\alpha_v>1/2$) and for the corrupted atom (per-view probability $1-\eta_v>1/2$), and tending to zero for DS negatives.
+\end{proof}
+
+\paragraph{What replaces Proposition 2.} Parameterize the reported law by three free weights and, per view, the two DS component probabilities plus $\eta_v$, giving $3+3n$ parameters against $2^n-1$ equations. Table~\ref{tab:corr} reports Jacobian ranks at 20 random parameter points per size (weights in $[0.1,0.3]$, DS probabilities in $[0.6,0.9]$ and $[0.1,0.4]$, $\eta_v\in[0.02,0.15]$).
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}ccccc@{}}
+\toprule
+$n$ & parameters & independent equations & Jacobian rank & median $\sigma_{\min}/\sigma_{\max}$\\
+\midrule
+4 & 15 & 15 & 15 & $1.1\times10^{-3}$\\
+5 & 18 & 31 & 18 & $8.0\times10^{-3}$\\
+6 & 21 & 63 & 21 & $1.2\times10^{-2}$\\
+7 & 24 & 127 & 24 & $1.2\times10^{-2}$\\
+\bottomrule
+\end{tabular}
+\caption{Relation-corrupted model: generic local identifiability of the reported-law parameters. Ranks were identical (min $=$ max) across the 20 points per row. The split of the corrupted-atom mass between $E^+$ and $B^+$ is not a parameter of this model, consistent with Corollary~2.}
+\label{tab:corr}
+\end{table}
+
+So the view threshold does not increase: four views remain enough for generic local identifiability, but of a different parameter vector, and $n=4$ is exactly just-identified. Two cautions. First, I expected the model to become weakly identified as $\eta\to0$, since the corrupted atoms approach point masses; the check does not support that. Holding all $\eta_v$ equal at $n=6$, the ratio $\sigma_{\min}/\sigma_{\max}$ is $2.1\times10^{-4}$ at $\eta=0.2$ and $4.4\times10^{-3}$ at $\eta=10^{-3}$, i.e.\ uniformly poor rather than degrading in $\eta$. The honest statement is that conditioning is bad throughout and the $\eta\to0$ claim should not be made without a profile-likelihood study of the atom weight. Second, these are local ranks at random points; the global check done for DSA has not been repeated here.
+
+%======================================================================
+\section*{Section 4 remark, corrected}
+
+\begin{remark}[Spurious dissent on correct items]
+Work on the probability space of $(x,\text{any randomness used to construct }\tau x)$, so that $E_\tau$ is a random variable even when it is a deterministic function of a realized item. Take an item all of whose true views are correct and apply the checks in $S$. The reported pattern is $\Wt_{(j,\tau)}=\sigma_\tau Y$, so the item leaves the unanimous stratum exactly on $\bigcup_{\tau\in S}\{E_\tau=1\}$:
+\begin{align*}
+P\Bigl(\bigcup_{\tau\in S}\{E_\tau=1\}\Bigr)&=1-\prod_{\tau\in S}(1-\eta_\tau)\quad\text{under independence across checks,}\\
+P\Bigl(\bigcup_{\tau\in S}\{E_\tau=1\}\Bigr)&\le\sum_{\tau\in S}\eta_\tau\quad\text{in general.}
+\end{align*}
+Independence across checks is an assumption, not a consequence of one verifier per check.
+\end{remark}
+
+%======================================================================
+\section*{Section 5, with the objective defined on reported dissent}
+
+For a blind false accept, let $C_\tau=\mathbb{I}\{W^\star_\tau=Y\}$ record whether the added view is \emph{correct} and $R_\tau=\mathbb{I}\{\Wt_\tau\neq+1\}$ record whether it \emph{reports} dissent. On such an item $R_\tau=C_\tau\oplus E_\tau$: a correct view with a bad relation is a missed detection, and a wrong view with a bad relation is an accidental one. The gate sees $R_\tau$, so the design objective should too:
+\[
+F_t(S)=P_{x\sim q_t}\Bigl(B_0^+\cap\bigcup_{\tau\in S}\{R_\tau=1\}\Bigr).
+\]
+This is still a union of events, so Proposition~4(a) holds verbatim for the $k=1$ consistency gate, and \S4 and \S5 now use the same quantity. Keep the oracle version $F^{\mathrm{orc}}_t(S)=P(B_0^+\cap\bigcup_{\tau\in S}\{C_\tau=1\})$ as a separate object for the scientific question of which transformation exposes which mechanism; do not let one symbol carry both.
+
+\begin{remark}[Why the false-reject constraint is not optional]
+Under $F_t$ alone the optimizer prefers checks that dissent often for any reason: a check with $\eta_\tau\approx1/2$ ``detects'' nearly everything and exposes nothing. The constraint is what rules this out, so the design problem must be stated as
+$\max_S F_t(S)$ subject to $\mathrm{FR}_t(S)\le\gamma$, where $\mathrm{FR}_t(S)=P(Y=+1,\ \bigcup_{\tau\in S}\{R_\tau=1\})$ is the mass of correct items the gate now rejects. \emph{For the $k=1$ consistency gate}, $\mathrm{FR}_t$ is another coverage function and hence monotone submodular; for $k\ge2$ the same counterexample as Proposition~4(b) applies to it, so the scoping must be stated on both sides. Maximizing a submodular objective under a submodular constraint (the SCSK problem of Iyer and Bilmes, NeurIPS 2013) admits approximation bounds that degrade with problem size and curvature; without additional structure one should not assume a constant factor. Replacing the constraint by the union bound $\sum_{\tau\in S}(\eta_\tau+\varepsilon_\tau)\le\gamma$ makes it a knapsack and restores the guarantee of Proposition~4(a) for the relaxed problem.
+\end{remark}
+
+%======================================================================
+\section*{Consequence for the backlog}
+
+The merge you propose is right, and it is larger than an appendix item. With nondifferential per-view relation noise the object of study is
+\[
+\text{exact DSA}\ \longrightarrow\ \text{relation-corrupted latent-class model},
+\]
+and with several verifiers per check the block flip of Lemma~4(c) makes it a mixture of mixtures. Identification, the view threshold, and the ensemble limit should all be developed in that model rather than patched onto DSA, and hierarchical dependence and imperfect relations become one theory task with two sources. The DSA results keep their role as the $\eta=0$ boundary case, which is the right way to present them: clean, exact, and known to be the idealization.
+\end{document}
