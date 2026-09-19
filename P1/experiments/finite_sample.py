@@ -410,6 +410,18 @@ def error4(est, truth):
     ))
 
 
+def fit_quality(est, truth_p, counts, partition):
+    """Return multinomial NLL and TV error for an estimated parameter."""
+    if est is None:
+        return np.nan, np.nan
+    q = law22_vec(est) if partition == "22" else law4_vec(est)
+    q = np.clip(np.asarray(q, dtype=float), 1e-14, None)
+    q = q / q.sum()
+    nll = float(-np.dot(np.asarray(counts, dtype=float), np.log(q)))
+    tv = float(0.5 * np.sum(np.abs(q - np.asarray(truth_p, dtype=float))))
+    return nll, tv
+
+
 def _normalized_minor_signal(lin, rows_idx):
     """Scale-free coefficient norm for corner-free 3x3 determinant polynomials.
 
@@ -736,8 +748,10 @@ def run(args):
                 t_constructive = time.perf_counter() - t0
 
                 errfun = error22 if part == "22" else error4
+                nll_c, tv_c = fit_quality(constructive, p, counts, part)
                 rows.append(dict(partition=part, N=N, replicate=rep, method="constructive",
                                  error=errfun(constructive, truth), regularity_margin=reg,
+                                 nll=nll_c, tv=tv_c, failed=int(constructive is None),
                                  seconds=t_constructive))
 
                 t0 = time.perf_counter()
@@ -746,8 +760,10 @@ def run(args):
                 else:
                     mlec = fit_mle(counts, part, 1, rng, init=constructive, maxiter=args.maxiter)
                 init_seconds = time.perf_counter() - t0
+                nll_i, tv_i = fit_quality(mlec, p, counts, part)
                 rows.append(dict(partition=part, N=N, replicate=rep, method="mle_constructive",
                                  error=errfun(mlec, truth), regularity_margin=reg,
+                                 nll=nll_i, tv=tv_i, failed=int(mlec is None),
                                  seconds=init_seconds))
 
                 t0 = time.perf_counter()
@@ -756,9 +772,11 @@ def run(args):
                 random_seconds = time.perf_counter() - t0
                 for k in args.restart_grid:
                     estk = curve[k]
+                    nll_k, tv_k = fit_quality(estk, p, counts, part)
                     rows.append(dict(partition=part, N=N, replicate=rep,
                                      method=f"mle_random_k{k}",
                                      error=errfun(estk, truth), regularity_margin=reg,
+                                     nll=nll_k, tv=tv_k, failed=int(estk is None),
                                      seconds=random_seconds))
 
                 kmax = max(args.restart_grid)
