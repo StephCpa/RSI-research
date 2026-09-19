@@ -1,0 +1,117 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs,enumitem,array}
+\usepackage[hidelinks]{hyperref}
+\usepackage[expansion=false]{microtype}
+\setlist{nosep,leftmargin=1.5em}
+
+\newtheorem{lemma}{Lemma}
+\newtheorem{definition}{Definition}
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+\newcommand{\status}[1]{\hfill{\normalfont\small\textsc{[#1]}}}
+
+\title{\textbf{v1.1 note}\\[2pt]
+\large Literal saturation certificate, the $\mathbb Z_2$ gauge lemma,\\ and the regularity definition}
+\author{18 September 2026}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-2.5em}
+
+All four points are adopted. The Rabinowitsch saturation reproduces your polynomials exactly; the gauge lemma verifies across every architecture, and it comes with one consequence worth stating: \emph{orientation is preserved by the gauge map}, so $0<\eta_\tau<1/2$ is the only condition that fixes the branch.
+
+%======================================================================
+\section*{1. The saturation, done literally}
+
+\texttt{two\_one\_one\_sat.py} is retired and replaced by \texttt{two\_one\_one\_gb.py}, which computes a lex Gr\"obner basis of
+$\langle F_0,F_+,F_-,\;w\det\mathcal B-1\rangle$ in $(w,\eta_C,\eta_B)$. At the witness it returns exactly your three generators:
+\[
+2560\,\eta_B+7w-1280,\qquad 16\,\eta_B-18\,\eta_C+1,\qquad (8\eta_B-1)(8\eta_B-7),
+\]
+so the eliminant is degree 2 with roots $\{\tfrac18,\tfrac78\}$ and the unique feasible root $\eta_B=\tfrac18$, whence $\eta_C=(16\eta_B+1)/18=\tfrac16$. This is the ideal-theoretic statement rather than the univariate factor-stripping heuristic, and it is also shorter to run.
+
+%======================================================================
+\section*{2. The gauge lemma, with one addition}
+
+\begin{lemma}[$\mathbb Z_2$ gauge symmetry]\status{verified numerically for every architecture tested}
+For any block partition, the map
+\[
+\eta_\tau^\dagger=1-\eta_\tau,\quad c_\pm^\dagger=c_\mp,\quad q^\dagger_{\pm,v}=1-q_{\mp,v},\quad S^\dagger_\pm=S_\mp
+\]
+leaves the reported law unchanged, because $C_{1-\eta}(1-q)=C_\eta(q)$ for a DS component and complementing $\eta$ swaps the two atom components, which the swap of $S_\pm$ undoes.
+\end{lemma}
+
+Checked on $(1,1,1,1)$, $(2,1,1)$, $(2,2)$, $(3,1)$, $(4)$, $(3,1,1)$ and $(1^5)$: maximum $|P-P^\dagger|$ was $5.6\times10^{-17}$ in every case.
+
+\begin{remark}[orientation does not fix the gauge]
+Under the map, $q^\dagger_{+,v}=1-q_{-,v}>\tfrac12$ and $q^\dagger_{-,v}=1-q_{+,v}<\tfrac12$, so the mirror parameter \emph{also} satisfies $q_+>\tfrac12>q_-$. The check confirms it in all seven architectures. Only $\eta^\dagger_\tau=1-\eta_\tau>\tfrac12$ fails. So:
+\begin{itemize}
+\item the orientation condition is not a gauge-fixing condition, and filtering candidates by orientation can never remove the mirror branch --- which is exactly why $\eta_B=\tfrac78$ survived every orientation test in $(2,1,1)$;
+\item $\rho=(1-2\eta_A)^2$ in $(3,1)$ and $z>1$ in $(4)$ are gauge quotients, not extra modelling assumptions, and should be presented that way;
+\item $0<\eta_\tau<\tfrac12$ should be introduced once, early, as the gauge fixing, with the lemma attached.
+\end{itemize}
+\end{remark}
+
+%======================================================================
+\section*{3. Genericity: the distinction adopted}
+
+The v1.0 sentence is replaced. The witness proves the regular set is nonempty; it does not by itself bound the generic eliminant degree, since branches can escape to infinity or leading coefficients can drop at a special point. So the $(2,1,1)$ statement is:
+\begin{quote}
+Under oriented-interior parameters with $\det\mathcal B\neq0$ and the saturated eliminant at its minimal expected degree two (a nonvanishing leading-coefficient/subresultant condition), the two algebraic branches are the true parameter and its gauge mirror, and exactly one satisfies $\eta_A,\eta_B,\eta_C<\tfrac12$. The witness shows the condition is not identically false.
+\end{quote}
+Degree two plus the gauge lemma is a much better argument than ``another root would need another factor'', because it says \emph{what} the second branch is.
+
+%======================================================================
+\section*{4. The regularity definition, split as you propose}
+
+\begin{definition}[oriented-interior]
+All component masses positive, $0<\eta_\tau<\tfrac12$ for every check, and $q_{+,v}>\tfrac12>q_{-,v}$ for every view. The $\eta$ condition is gauge fixing (Lemma~1); the $q$ condition is labelling.
+\end{definition}
+
+\begin{definition}[regular for a partition $\pi$]
+Oriented-interior, and in addition the finite set of determinants, discriminants and subresultants used by the reconstruction for $\pi$ is nonzero:
+\begin{center}\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+$(2,2)$ & $\det R_{MM}\neq0$; product quadratic nondegenerate; atom-moment denominators nonzero\\
+$(3,1)$ & line--model intersection nondegenerate; the common-$\rho$ gcd has degree one\\
+$(4)$ & some $2|2$ flattening has non-identically-zero corner-free minors; corner slopes nonzero;\\
+ & rank-2 decomposition nondegenerate\\
+$(2,1,1)$ & $\det\mathcal B\neq0$; saturated eliminant of minimal degree two\\
+$(3,1,1)$ & Kruskal factors and size-3 inverse denominators nonzero ($s_k^2\neq s_\ell^2$), with the\\
+ & exchangeable submodel treated separately: closed form fails, local ID survives\\
+\bottomrule
+\end{tabular}
+\end{center}
+Each condition is nonvacuous: an exact rational witness satisfying it is given for every $\pi$.
+\end{definition}
+
+%======================================================================
+\section*{5. Headline, with the qualifier}
+
+\[
+\boxed{\textbf{At }n=4:\quad T=n\ \Rightarrow\ \text{generic local ID with open-set global ambiguity};\qquad T<n\ \Rightarrow\ \text{generic global ID}}
+\]
+The qualifier is necessary: for $n\ge5$ even the fully singleton model is generically globally identifiable, so the statement is about the four-view boundary, not about singleton blocks in general. The $(1,1,1,1)$ cell keeps its careful wording --- generically locally identifiable, with certified global ambiguity on a nonempty open set --- rather than ``generically not globally identifiable'', which is not proved.
+
+\begin{center}\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+$(1,1,1,1)$ & generic local ID; certified open-set global aliasing\\
+$(2,1,1)$ & generic global ID via saturated two-variable reconstruction\\
+$(2,2)$ & generic global ID via structural-zero rank completion\\
+$(3,1)$ & generic global ID via common-$\rho$ reconstruction\\
+$(4)$ & generic global ID via complement-pair flattening minors\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+%======================================================================
+\section*{6. Reproducibility}
+
+\texttt{two\_one\_one\_model.py} now holds the exact witness model and returns $F_0,F_\pm$, $\det\mathcal B$ and the data maps; \texttt{two\_one\_one\_gb.py} and \texttt{two\_one\_one\_roots.py} import it. No \texttt{exec}, no reliance on the working directory. \texttt{two\_one\_one\_sat.py} is deleted rather than kept alongside, so there is one certificate and it is the ideal-theoretic one.
+\end{document}
