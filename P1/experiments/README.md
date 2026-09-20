@@ -158,3 +158,24 @@ The local collector should use:
 
 The primary CSV schemas are in `audit_views_schema_example.csv` (gold blind)
 and `audit_schema_example.csv` (after gold).
+
+
+## 11. MBPP+ preflight v0.3 draft
+
+After the two gold-blind freeze refusals, the next preflight design is in
+`preflight_prereg_v0_3.md`. It changes the primary freeze gates from the old
+strict A-pass proxy to the actual unanimity-stratum and view-heterogeneity
+quantities, broadens the problem-level sampling shape, freezes transport
+retries/missing-view sensitivity, and stops on the number of problems
+contributing to `U1+`.
+
+Before any new API run, execute the one remaining diagnostic on the existing
+v0.2 candidate artifact:
+
+```bash
+python P1/experiments/preflight_duplication_check.py path/to/v0_2_candidates.csv
+```
+
+The diagnostic accepts CSV or JSONL with `problem_id` plus either `ast_hash`
+or `code`. Do not freeze v0.3 until its duplication branch has been recorded
+in the preregistration.
