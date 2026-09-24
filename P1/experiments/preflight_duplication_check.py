@@ -1,30 +1,35 @@
-"""Gold-blind AST-duplication diagnostic for MBPP+ preflight v0.2.
+"""Gold-blind three-level duplication diagnostic for MBPP+ preflight v0.2.
 
-Accepted input formats:
-  * CSV
-  * JSONL
+Required input: CSV or JSONL with problem_id and candidate code.
 
-Required fields:
-  problem_id
-and either:
-  ast_hash
-or:
-  code
+Measures:
+  raw    exact response text: sampler/cache-collapse diagnostic
+  strict original AST identity: continuity with earlier reports
+  loose  docstrings removed + function-local alpha-renaming: solution convergence
 
-Optional fields:
-  candidate_id
-  screen_tests_A   (used for the A-pass restricted summary)
+q_dup is computed over ALL unordered within-problem candidate pairs, so the
+metric remains valid when later preflights use k=3.
 
-The script never reads truth/gold fields. If such fields are present, they are ignored.
+Branching (frozen before this diagnostic):
+  raw q_dup   >= 0.25 -> SAMPLER_COLLAPSE
+  else loose q_dup >= 0.25 -> DUPLICATION_HIGH
+  else -> PROBLEM_LEVEL_HETEROGENEITY
+
+Only SAMPLER_COLLAPSE blocks the planned generator switch.
 """
 from __future__ import annotations
 
 import argparse
 import csv
+import itertools
 import json
 from pathlib import Path
 
-from ast_hash import ast_sha256
+from ast_hash import raw_sha256, strict_ast_sha256, loose_ast_sha256
+
+PLANNED_WEAKER_GENERATOR_MODEL_ID = "qwen3.6-flash-2026-04-16"
+RAW_COLLAPSE_THRESHOLD = 0.25
+LOOSE_DUPLICATION_THRESHOLD = 0.25
 
 
 def load_rows(path: Path):
@@ -40,46 +45,132 @@ def load_rows(path: Path):
     return rows
 
 
-def summarize(rows, only_apass=False):
-    work = []
-    for r in rows:
-        if only_apass and str(r.get("screen_tests_A", "")) not in {"1", "true", "True"}:
-            continue
-        if not r.get("problem_id"):
-            continue
-        h = r.get("ast_hash")
-        if not h:
-            code = r.get("code")
-            if not code:
-                continue
-            try:
-                h = ast_sha256(code)
-            except Exception:
-                continue
-        work.append((str(r["problem_id"]), str(h)))
+def _is_apass(row):
+    return str(row.get("screen_tests_A", "")).strip() in {"1", "true", "True"}
 
+
+def prepare(rows, only_apass=False):
+    prepared = []
+    syntax_errors = []
+    missing_code = []
+
+    for i, row in enumerate(rows):
+        if only_apass and not _is_apass(row):
+            continue
+        problem = row.get("problem_id")
+        code = row.get("code")
+        candidate = row.get("candidate_id", f"row_{i}")
+        if not problem:
+            continue
+        if code is None:
+            missing_code.append(candidate)
+            continue
+
+        rec = {
+            "problem_id": str(problem),
+            "candidate_id": str(candidate),
+            "raw": raw_sha256(str(code)),
+            "strict": None,
+            "loose": None,
+        }
+        try:
+            rec["strict"] = strict_ast_sha256(str(code))
+            rec["loose"] = loose_ast_sha256(str(code))
+        except SyntaxError as e:
+            syntax_errors.append({
+                "candidate_id": str(candidate),
+                "problem_id": str(problem),
+                "lineno": e.lineno,
+                "offset": e.offset,
+                "msg": e.msg,
+            })
+        prepared.append(rec)
+
+    return prepared, syntax_errors, missing_code
+
+
+def pair_metric(prepared, key):
     by_problem = {}
-    for p, h in work:
-        by_problem.setdefault(p, []).append(h)
+    for r in prepared:
+        if r[key] is not None:
+            by_problem.setdefault(r["problem_id"], []).append(r[key])
 
-    eligible = {p: hs for p, hs in by_problem.items() if len(hs) >= 2}
-    pair_problems = {p: hs[:2] for p, hs in eligible.items()}
-    same_pairs = sum(1 for hs in pair_problems.values() if len(set(hs)) == 1)
-    total_pairs = len(pair_problems)
-
-    total_candidates = sum(len(hs) for hs in by_problem.values())
-    distinct_candidates = sum(len(set(hs)) for hs in by_problem.values())
+    equal_pairs = 0
+    total_pairs = 0
+    per_problem = {}
+    for problem, hashes in by_problem.items():
+        eq = 0
+        tot = 0
+        for a, b in itertools.combinations(hashes, 2):
+            tot += 1
+            eq += int(a == b)
+        if tot:
+            equal_pairs += eq
+            total_pairs += tot
+            per_problem[problem] = {
+                "n": len(hashes),
+                "equal_pairs": eq,
+                "total_pairs": tot,
+                "q_dup": eq / tot,
+                "distinct": len(set(hashes)),
+            }
 
     return {
-        "problems_with_candidates": len(by_problem),
-        "problems_with_at_least_2_candidates": len(eligible),
-        "two_candidate_problem_pairs": total_pairs,
-        "same_ast_pairs": same_pairs,
-        "q_dup": None if total_pairs == 0 else same_pairs / total_pairs,
-        "candidate_rows_used": total_candidates,
-        "distinct_ast_count_sum": distinct_candidates,
-        "duplicate_candidate_fraction": None if total_candidates == 0 else 1 - distinct_candidates / total_candidates,
+        "equal_pairs": equal_pairs,
+        "total_pairs": total_pairs,
+        "q_dup": None if total_pairs == 0 else equal_pairs / total_pairs,
+        "problems_with_pairs": len(per_problem),
+        "per_problem": per_problem,
     }
+
+
+def summarize(rows, only_apass=False):
+    prepared, syntax_errors, missing_code = prepare(rows, only_apass=only_apass)
+    return {
+        "candidate_rows_used_for_raw": len(prepared),
+        "raw": pair_metric(prepared, "raw"),
+        "strict": pair_metric(prepared, "strict"),
+        "loose": pair_metric(prepared, "loose"),
+        "syntax_error_count": len(syntax_errors),
+        "syntax_errors": syntax_errors,
+        "missing_code_count": len(missing_code),
+        "missing_code_candidate_ids": missing_code,
+    }
+
+
+def optional_metadata(rows):
+    out = {}
+    fingerprint_keys = ["system_fingerprint", "model_fingerprint"]
+    cache_keys = [
+        "cached_tokens",
+        "cache_read_input_tokens",
+        "cache_creation_input_tokens",
+    ]
+    for key in fingerprint_keys:
+        vals = [r.get(key) for r in rows if r.get(key) not in (None, "")]
+        if vals:
+            out[key] = {
+                "n": len(vals),
+                "unique": sorted(set(map(str, vals))),
+            }
+    for key in cache_keys:
+        vals = []
+        for r in rows:
+            value = r.get(key)
+            if value in (None, ""):
+                continue
+            try:
+                vals.append(float(value))
+            except Exception:
+                pass
+        if vals:
+            out[key] = {
+                "n": len(vals),
+                "min": min(vals),
+                "max": max(vals),
+                "mean": sum(vals) / len(vals),
+            }
+    return out
 
 
 def main():
@@ -89,19 +180,47 @@ def main():
     a = p.parse_args()
 
     rows = load_rows(Path(a.input_file))
-    result = {
-        "all_usable_rows": summarize(rows, only_apass=False),
-        "a_pass_only": summarize(rows, only_apass=True),
-        "decision_threshold_q_dup": 0.25,
-    }
-    q = result["all_usable_rows"]["q_dup"]
-    if q is None:
+    all_summary = summarize(rows, only_apass=False)
+    apass_summary = summarize(rows, only_apass=True)
+
+    q_raw = all_summary["raw"]["q_dup"]
+    q_loose = all_summary["loose"]["q_dup"]
+    if q_raw is None or q_loose is None:
         branch = "INSUFFICIENT_DATA"
-    elif q >= 0.25:
+        switch_generator = False
+    elif q_raw >= RAW_COLLAPSE_THRESHOLD:
+        branch = "SAMPLER_COLLAPSE"
+        switch_generator = False
+    elif q_loose >= LOOSE_DUPLICATION_THRESHOLD:
         branch = "DUPLICATION_HIGH"
+        switch_generator = True
     else:
         branch = "PROBLEM_LEVEL_HETEROGENEITY"
-    result["branch"] = branch
+        switch_generator = True
+
+    result = {
+        "planned_weaker_generator_model_id_frozen_before_diagnostic":
+            PLANNED_WEAKER_GENERATOR_MODEL_ID,
+        "thresholds": {
+            "raw_sampler_collapse": RAW_COLLAPSE_THRESHOLD,
+            "loose_duplication_high": LOOSE_DUPLICATION_THRESHOLD,
+        },
+        "all_candidates": all_summary,
+        "a_pass_only": apass_summary,
+        "optional_provider_metadata": optional_metadata(rows),
+        "branch": branch,
+        "generator_switch_allowed": switch_generator,
+        "interpretation": {
+            "SAMPLER_COLLAPSE":
+                "Exact-text repeats are too frequent; verify temperature/seed/cache propagation before changing generator.",
+            "DUPLICATION_HIGH":
+                "Sampler text varies, but solutions converge after alpha-normalization; proceed to weaker generator and keep many-problems/few-candidates sampling.",
+            "PROBLEM_LEVEL_HETEROGENEITY":
+                "Neither raw nor loose duplication is high; proceed to the preregistered weaker generator.",
+            "INSUFFICIENT_DATA":
+                "Not enough usable within-problem pairs to take the preregistered branch.",
+        }[branch],
+    }
 
     Path(a.output).write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(result, indent=2))
