@@ -3,8 +3,8 @@
 **Project:** P1 — Self-Calibration of AI Verifiers  
 **Status:** protocol draft to freeze before any hidden/gold outcome is inspected  
 **Supersedes:** audit_prereg_v0_2.md (pre-freeze revision)  
-**Primary benchmark:** HumanEval+/EvalPlus-style split  
-**Preregistered robustness benchmark:** MBPP+  
+**Confirmatory strata:** MBPP+ (v0.2.0 task frame) + HumanEval+  
+**Preflight design:** see `preflight_prereg_v0_3.md`  
 **Purpose:** test whether a heterogeneous verifier/check ensemble has excess unanimous error beyond an independent-error null, and whether targeted gold auditing resolves the resulting blind-set uncertainty.
 
 ## 1. Split the base tests: screen A and view B
@@ -124,27 +124,25 @@ Primary uncertainty for \(E_+\) is a problem-cluster bootstrap that refits the n
 
 A positive \(E_+\), together with gold-measured \(r_1>0\), is the empirical signature that wrong candidates accumulate in unanimity more strongly than the independent-error null explains.
 
-## 5. Gold-blind preflight and fixed diagnostic cohort
+## 5. Gold-blind preflight
 
-Before any hidden/gold suite is run:
+The active preflight protocol is `preflight_prereg_v0_3.md`.
 
-1. run an infrastructure preflight of about 50 candidates;
-2. freeze config/prompts/models;
-3. generate a fixed first cohort of 10 candidates/problem;
-4. deduplicate within problem by AST-normalized code;
-5. compute all W-only diagnostics.
+Key frozen points are:
 
-Report on the deduplicated fixed cohort:
+- v0.3 MBPP+ preflight = 100 problems × 2 candidates;
+- already-burned v0.1/v0.2 MBPP+ problems are reused first to conserve fresh
+  confirmatory frame;
+- no plus/gold labels are executed during preflight;
+- the primary freeze gates are unanimity-stratum nondegeneracy and view
+  heterogeneity, not the old strict A-pass proxy;
+- the three-level raw/strict/loose duplication diagnostic is run before the new
+  preflight;
+- the weaker generator is already frozen before that diagnostic;
+- all design-informing preflight problems are excluded from their benchmark's
+  confirmatory frame.
 
-- \(\hat u_0,\hat u_1\);
-- 6×6 LLM-view disagreement matrix;
-- 6×6 LLM-view phi-correlation matrix;
-- within-judge/across-check versus across-judge/within-check summaries;
-- marginal acceptance of every view;
-- test-B agreement with the six LLM views;
-- AST duplicate rate.
-
-The matrices are direct evidence about whether the empirical 3-check × 2-judge subdesign resembles the intended block structure or instead contains strong judge-level dependence.
+The preflight artifacts and their problem manifests are hashed into the lock.
 
 ## 6. Judge repeatability / R&R
 
@@ -163,26 +161,86 @@ Primary generalization analyses deduplicate within problem by the SHA-256 hash o
 
 The first occurrence is retained. Raw-pool results are reported as a sensitivity analysis.
 
-## 8. W-only stopping and fixed-pool precision target
+## 8. Confirmatory sampling frame and precision
 
-Generation proceeds in uniform rounds of
-\[
-10,\ 15,\ 20,\ 25,\ 30
-\]
-candidates/problem and uses only W and AST hashes.
+The confirmatory main run is a **two-stratum census of the frozen eligible
+problem frames**, not a candidate-count stopping design.
 
-The stopping target is
-\[
-n^{\mathrm{dedup}}_{U_1^+}\ge2500,
-\]
-or the maximum 30 candidates/problem.
+### 8.1 MBPP+ stratum
 
-The target 2500 is chosen before gold because it gives approximately 0.02 worst-case half-width for a 95% binomial proportion interval in a fixed pool. If the target is not reached, the run stops at the maximum round and is labeled a fixed-pool precision shortfall; generation is not extended after inspecting Y.
+MBPP+ v0.2.0 contains 378 tasks before protocol exclusions. Define
 
-After gold is revealed, report the realized CP half-width. The desired fixed-pool precision criterion is
-\[
-\text{CP half-width}(r_1)\le0.02.
-\]
+[
+F_M
+=
+{	ext{canonical-harness-valid MBPP+ tasks}}
+setminus
+{	ext{all MBPP+ design-informing preflight tasks}}.
+]
+
+The v0.3 preflight reuses already-burned v0.1/v0.2 tasks first, so the union of
+MBPP+ preflight problems is targeted to be 100 unique tasks rather than 150
+fresh tasks.
+
+### 8.2 HumanEval+ stratum
+
+Define
+
+[
+F_H
+=
+{	ext{canonical-harness-valid HumanEval+ tasks}}
+setminus
+{	ext{all HumanEval+ design-informing preflight tasks}}.
+]
+
+HumanEval contains 164 tasks before exclusions.
+
+HumanEval+ is declared before any confirmatory W statistic exists; it is not a
+post-result rescue benchmark.
+
+### 8.3 Candidate depth
+
+Every problem in (F_Mcup F_H) receives exactly 3 generation attempts under
+the same frozen generator and verifier stack. Candidate depth is never increased
+to rescue precision.
+
+### 8.4 Terminal state
+
+The W-only main run ends only at
+
+[
+oxed{	ext{FRAME EXHAUSTED}}
+]
+
+when every eligible problem in both frozen strata has received its 3 attempts
+and the frozen transport/missingness policy has terminated.
+
+There is no early stop based on (M_{U_1}), candidate count, or observed W
+rates once the confirmatory run starts.
+
+Only after the W-only frame is exhausted are the candidate/view manifests
+frozen and gold opened.
+
+### 8.5 Precision
+
+The desired clustered 95% half-width
+
+[
+h_{mathrm{cluster}}(r_1)le0.02
+]
+
+is an aspirational **analysis-adequacy bar**, not a sampling stop, because it
+depends on gold (Y).
+
+After gold, report the achieved clustered half-width separately for MBPP+,
+HumanEval+, and the stratified pooled estimand. If a half-width exceeds 0.02,
+mark that estimate **precision-limited** and report it as such. No additional
+benchmark, hard tail, preflight reuse, or within-problem depth is added after
+seeing this result.
+
+The fixed-pool Clopper--Pearson half-width is still reported, but it does not
+substitute for the clustered interval.
 
 ## 9. Practical interpretation bars
 
@@ -202,11 +260,34 @@ A candidate-level CP result never overrides the clustered category.
 
 ## 10. Primary inference
 
-Primary population inference is a problem-level cluster bootstrap with 10,000 replicates. Resample problems with replacement and carry all retained AST-deduplicated candidates for each selected problem.
+Primary population inference is **benchmark-stratified problem-level cluster
+bootstrap** with 10,000 replicates.
 
-Report the approximate problem-level ICC, empirical design effect, and effective candidate count for the blind-error indicator within \(U_1^+\).
+Within each bootstrap replicate:
 
-Clopper--Pearson remains supplementary, explicitly labeled fixed-pool certification.
+1. resample MBPP+ problem IDs with replacement from (F_M), preserving
+   (|F_M|);
+2. independently resample HumanEval+ problem IDs with replacement from (F_H),
+   preserving (|F_H|);
+3. carry all retained AST-deduplicated candidates for each selected problem;
+4. recompute benchmark-specific and pooled statistics.
+
+Report benchmark-specific (r_{1,M}) and (r_{1,H}) first.
+
+The primary pooled task-frame weights are frozen as
+
+[
+omega_M=rac{|F_M|}{|F_M|+|F_H|},
+qquad
+omega_H=1-omega_M.
+]
+
+Also report an equal-stratum-weight sensitivity
+(omega_M=omega_H=1/2).
+
+Report problem-level ICC, empirical design effect, and effective candidate count
+within each benchmark stratum. A candidate-level Clopper--Pearson interval is
+supplementary fixed-pool certification only.
 
 ## 11. Centerpiece model-free identified-set panel
 
@@ -264,11 +345,20 @@ Compare strategies over 2,000 repeated audit samples per budget by RMSE, median 
 
 Before substantive gold analysis, treat the A-screen verdict as pseudo truth. Every included candidate passed A by construction, so the pseudo false-accept rate inside \(U_1^+\) must be exactly zero. Any nonzero value indicates a join/normalization bug and invalidates the run until fixed.
 
-## 14. MBPP+ robustness run
+## 14. Cross-benchmark heterogeneity
 
-HumanEval contamination limits external validity. MBPP+ is preregistered now as an appendix robustness benchmark rather than chosen after seeing HumanEval+.
+MBPP+ and HumanEval+ are both confirmatory strata.
 
-Use the same frozen generator, judges, prompts, parsing, test-split algorithm, repeatability fraction, dedup rule, and analysis code. Run a fixed 5 candidates/problem with no outcome-dependent extension. Report \(r_1\), \(E_+\), and the centerpiece identified-set shrinkage with problem-cluster intervals.
+For every main statistic report:
+
+- MBPP+ estimate and cluster interval;
+- HumanEval+ estimate and cluster interval;
+- task-frame-weighted pooled estimate;
+- equal-stratum-weight sensitivity.
+
+A pooled headline is not used to hide qualitative disagreement between the two
+benchmarks. If the benchmark-specific effects have opposite signs or materially
+different interpretation categories, report the heterogeneity directly.
 
 ## 15. Freeze
 
@@ -283,7 +373,11 @@ Before candidate generation, commit:
 - hash of audit_analysis_spec_v0_1.md;
 - hash of this v0.3 preregistration;
 - exact model/provider identifiers;
-- base-test split seed and repeatability seed.
+- base-test split seed and repeatability seed;
+- MBPP+ and HumanEval+ preflight-union manifests;
+- canonical-harness exclusion manifests for both benchmarks;
+- frozen confirmatory frame manifests `F_M` and `F_H`;
+- frozen stratum-weight rule.
 
 Any later change requires a new protocol version before inspecting the affected gold result.
 
