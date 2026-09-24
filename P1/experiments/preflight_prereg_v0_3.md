@@ -255,6 +255,11 @@ v0.3 gate evaluation gold blind.
 
 The full post-lock design uses the two-stratum frame in Section 8.
 
+The MBPP+ split asymmetry is known before this preflight: under the frozen
+ceil/floor A/B split, 349 of 378 MBPP+ v0.2.0 tasks have exactly three base
+tests and therefore a one-test B view. The preflight must report B-view dissent
+rather than silently treating all test-B views as equally strong.
+
 ## 6. Primary preflight freeze gates
 
 The old strict \(0.10<P(A\text{-pass})<0.90\) gate is retired in v0.3 because it
@@ -330,6 +335,8 @@ Before freeze, write:
 - 6×6 LLM disagreement matrix;
 - six marginal LLM positive rates;
 - test-B vs LLM-view agreement;
+- distribution of test-B size `|B|`;
+- `P(V_testB=-1 | A-pass, complete)` overall and stratified by `|B|`;
 - required-view row completeness;
 - missing cells by judge/check/error type;
 - judge-repeatability flip rate if the 5% repeatability sample is already run.
