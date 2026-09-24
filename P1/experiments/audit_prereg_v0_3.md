@@ -105,6 +105,29 @@ Every split-impossible problem is written to a frozen split-exclusion manifest.
 The split manifest, split-exclusion manifest, and seed for each benchmark are
 hashed in the lock file.
 
+### 1.5 Pinned dataset integrity and recomputed exclusions
+
+The two dataset files are version-pinned before freeze:
+
+- MBPP+ `v0.2.0`, expected SHA-256 prefix `b54e762755248ca4`;
+- HumanEval+ `v0.1.10`, expected SHA-256 prefix `42526ec0e7d5f3ee`.
+
+The config must contain the **full 64-hex SHA-256** for each local JSONL file.
+At freeze time the script recomputes each full file hash and rejects any
+mismatch or null hash.
+
+The freeze then parses `base_input` for every task in the pinned files,
+recomputes the complete set
+[
+{,	ext{task}: |	exttt{base_input}|<2,},
+]
+and requires exact equality with the split-exclusion manifest. Thus
+`HumanEval/34` is an asserted consequence of the pinned file, not a manually
+trusted exclusion.
+
+The freeze also recomputes the complete confirmatory frame from the pinned task
+IDs, split exclusions, canonical-harness failures, and preflight-union IDs.
+
 ## 2. Verifier/check architecture
 
 After A-screening, the released views are:
