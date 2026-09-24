@@ -23,63 +23,124 @@ No plus/gold result may be inspected while executing this document.
 
 ## 1. One open diagnostic before changing the generator
 
-Run an AST-normalized duplication audit on the existing v0.2 candidates.
+Run a **three-level duplication audit** on the existing v0.2 candidate text.
+The three measures answer different questions and must not be conflated.
 
-For each problem, compute:
+### 1.1 Raw-text duplication — sampler/cache diagnostic
 
-\[
-d_p =
-\frac{\#\{\text{distinct normalized AST hashes}\}}
-     {\#\{\text{successfully extracted candidates}\}}.
-\]
+For each candidate, hash the exact UTF-8 response text:
 
-For the current 2-candidate-per-problem v0.2 sample, additionally report:
+[
+h_{raw}(x)=operatorname{SHA256}(x).
+]
 
-- number and fraction of problems with 1 distinct AST out of 2;
-- number and fraction with 2 distinct ASTs out of 2;
-- overall duplicate-candidate fraction;
-- the same quantities restricted to A-pass problems.
+This measure is sensitive to byte-identical outputs. At the requested stochastic
+sampling settings, a high exact-text repeat rate is evidence to check whether
+temperature/top-p/seed parameters are reaching the API or whether responses are
+being cached/replayed.
 
-### 1.1 Decision branch
+### 1.2 Strict AST duplication — continuity metric
 
-Let \(q_{dup}\) be the fraction of eligible 2-candidate problems whose two
-candidates have the same normalized AST hash.
+Retain the previous metric:
 
-- If \(q_{dup}\ge 0.25\), classify the proposal sampler as **duplication-high**.
-  Before changing model capability, verify that the requested temperature /
-  sampling parameters actually reach the provider and that no fixed seed or
-  response cache is collapsing the two draws. Re-run a gold-blind preflight
-  after fixing sampling.
-- If \(q_{dup}<0.25\), classify the observed 0/2-vs-2/2 behavior as primarily
-  **problem-level heterogeneity** and proceed to the one-step-weaker generator
-  branch below.
+[
+h_{strict}(x)=
+operatorname{SHA256}{	exttt{ast.dump(ast.parse(x), include_attributes=False)}}.
+]
 
-The 0.25 threshold is a pre-data operational trigger for this diagnostic only;
-it is not a paper result.
+Comments disappear, but docstrings and identifier spellings remain. This metric
+is reported only for continuity with v0.1/v0.2; it does **not** drive the branch.
 
-This duplication check is the only open design item in v0.3.
+### 1.3 Loose AST duplication — solution-convergence diagnostic
 
----
+Construct a conservative loose AST by:
+
+- removing module/function/class docstrings;
+- alpha-renaming function-local arguments and local identifiers by binding
+  order;
+- leaving global/builtin names, attributes, literals, operators, and control
+  structure intact.
+
+Then hash the resulting AST dump.
+
+This treats simple local-variable renames and docstring additions as the same
+solution without attempting general semantic equivalence.
+
+### 1.4 Pair definition
+
+For every metric, compute duplication over **all unordered within-problem
+candidate pairs**, not just the first two:
+
+[
+q_{dup}^{(m)}
+=
+rac{#{(i,j):i<j, h_m(x_i)=h_m(x_j)}}
+     {#{(i,j):i<j}}.
+]
+
+This definition remains valid when the main design uses three candidates per
+problem.
+
+Syntax errors must be counted and listed; they are not silently skipped.
+Raw-text hashes remain available for syntax-error rows, while strict/loose AST
+pair denominators use only syntax-valid pairs.
+
+### 1.5 Frozen decision branch
+
+Use operational threshold 0.25 for the two branching metrics:
+
+- If
+  [
+  q_{dup}^{raw}ge0.25,
+  ]
+  classify **SAMPLER_COLLAPSE**. Do **not** change generator capability. First
+  verify temperature/top-p propagation, fixed seeds, response caching, and any
+  provider cache/fingerprint metadata that is available.
+
+- Else if
+  [
+  q_{dup}^{loose}ge0.25,
+  ]
+  classify **DUPLICATION_HIGH**. The sampler is producing different text, but
+  the solutions converge structurally. Proceed to the preregistered weaker
+  generator; this branch is also evidence for keeping the many-problems /
+  few-candidates sampling shape.
+
+- Else classify **PROBLEM_LEVEL_HETEROGENEITY** and proceed to the
+  preregistered weaker generator.
+
+Only **SAMPLER_COLLAPSE** blocks the generator switch.
+
+The strict AST rate is reported but does not choose the branch.
+
+This duplication check is the only open empirical diagnostic before the v0.3
+API run.
 
 ## 2. Generator change
 
-If the duplication diagnostic does not reveal a collapsed sampler:
+The weaker generator is frozen **before** running the duplication diagnostic:
+
+[
+oxed{	exttt{qwen3.6-flash-2026-04-16}}
+]
+
+This is the dated Qwen3.6-Flash snapshot used as the one-generation-lower
+replacement for the current (	exttt{qwen3.7-flash}) proposal model.
+
+Rules:
 
 - keep MBPP+ as the benchmark population;
 - do **not** select a hard tail;
-- switch the generator down exactly one declared capability step;
-- prefer staying in the same model family when a clearly ordered smaller model
-  is locally available;
-- freeze the exact provider/model ID and decoding parameters before the new
-  preflight.
+- keep the v0.2 candidate-generation prompt and decoding policy unchanged
+  unless the duplication branch is **SAMPLER_COLLAPSE**, in which case only
+  sampler/transport plumbing is repaired and the generator model is not changed;
+- if the exact snapshot ID above is unavailable on the local endpoint, do not
+  silently substitute an alias or another model. Record the availability
+  failure and create a new preregistration version before choosing a substitute;
+- no second capability downgrade is allowed inside v0.3.
 
-The purpose is to move the proposal distribution away from near-universal
-A-pass without flooding the pool with blatantly wrong code.
-
-No second capability downgrade is allowed inside v0.3. A further downgrade
-requires v0.4.
-
----
+Under **DUPLICATION_HIGH** or **PROBLEM_LEVEL_HETEROGENEITY**, the next
+preflight uses exactly (	exttt{qwen3.6-flash-2026-04-16}).
 
 ## 3. Judge B transport blocker
 
@@ -277,6 +338,19 @@ Sample in problem batches up to:
 Problem IDs are sampled without replacement from the canonical-harness-valid
 population using the frozen main-sample seed.
 
+### 8.0 Preflight/main separation
+
+The main sampling frame **excludes every problem used in any gold-blind
+preflight that informed the final design**, including the v0.1, v0.2, and v0.3
+preflight problem IDs.
+
+In particular, none of the 100 v0.3 preflight problems may appear in the
+400-problem main draw.
+
+The excluded-preflight problem manifest is frozen and hashed before the main
+draw. This prevents W-level statistics used to choose or validate the gates
+from re-entering the confirmatory main sample.
+
 Do not extend candidate depth within a problem beyond 3 in v0.3.
 
 ### 8.1 W-only stopping rule
@@ -332,7 +406,7 @@ preregistration version declared before drawing from it.
 |---|---|---|
 | Main diagnostic problem | A-pass rate | proposal duplication + unanimity degeneracy |
 | Preflight sampling | 40×2 | 100×2 |
-| Generator | qwen3.7-flash | one declared step weaker if duplication-low |
+| Generator | qwen3.7-flash | `qwen3.6-flash-2026-04-16` unless SAMPLER_COLLAPSE |
 | Hard-tail selection | forbidden | still forbidden |
 | Primary freeze gate | strict A-pass band | \(U_1^+\) share + view heterogeneity |
 | A-pass band | hard \(0.10<p<0.90\) | secondary warning \(0.05<p<0.98\) |
@@ -340,6 +414,7 @@ preregistration version declared before drawing from it.
 | Retry policy | transport-only, not fully frozen | initial + 3 retries at 2/8/32 s |
 | Missing views | freeze failure | row exclusion + two extreme imputations |
 | Main sampling shape | candidate-heavy | up to 400 problems ×3 |
+| Preflight/main overlap | unspecified | main excludes all v0.1–v0.3 preflight problems |
 | Main stopping | candidate count | problems contributing to \(U_1^+\) |
 | Canonical harness failure | observed ad hoc | preregistered base-harness exclusion |
 
@@ -359,8 +434,13 @@ its result appended below.**
 
 ### Duplication diagnostic result
 
-- v0.2 eligible problems: **TO FILL**
-- same-AST 2/2 problem pairs: **TO FILL**
-- \(q_{dup}\): **TO FILL**
-- branch: **TO FILL — duplication-high / problem-level heterogeneity**
+- planned weaker generator fixed before diagnostic: `qwen3.6-flash-2026-04-16`
+- v0.2 usable within-problem pairs: **TO FILL**
+- raw equal-pair fraction (q_{dup}^{raw}): **TO FILL**
+- strict AST equal-pair fraction (q_{dup}^{strict}): **TO FILL**
+- loose AST equal-pair fraction (q_{dup}^{loose}): **TO FILL**
+- syntax-error rows: **TO FILL**
+- branch: **TO FILL — SAMPLER_COLLAPSE / DUPLICATION_HIGH / PROBLEM_LEVEL_HETEROGENEITY**
+- generator switch allowed by branch: **TO FILL**
+- optional cache/fingerprint metadata finding: **TO FILL / unavailable**
 - action taken before v0.3 API calls: **TO FILL**
