@@ -4,13 +4,16 @@ This document is hashed by freeze_audit_config.py and is part of the preregistra
 
 ## A. Primary population
 
-Primary rows are:
+Primary rows are drawn from two frozen benchmark strata, MBPP+ and HumanEval+.
+
+Within each benchmark, primary rows are:
 
 1. passed base-test screen A;
 2. valid frozen candidate/view joins;
-3. first occurrence of each (problem_id, ast_hash) pair.
+3. first occurrence of each `(benchmark, problem_id, ast_hash)` tuple.
 
-All-candidate results are sensitivity analyses.
+All-candidate results are sensitivity analyses. No design-informing preflight
+problem appears in the confirmatory frame.
 
 ## B. Primary schemes
 
@@ -22,9 +25,35 @@ All-candidate results are sensitivity analyses.
 
 Compute \(u_m,r_m,b_m\), \(D=U_0^+\setminus U_1^+\), \(r_0-r_1\), enrichment, and rejection-cost quantities exactly as in preregistration v0.3.
 
-## C. Cluster bootstrap
+## C. Stratified cluster bootstrap
 
-Resample problem IDs with replacement. For each selected problem carry all retained deduplicated candidates. Recompute the statistic from the bootstrap sample. Use 10,000 replicates and percentile two-sided 95% intervals.
+Use 10,000 replicates and percentile two-sided 95% intervals.
+
+Within each replicate:
+
+1. resample MBPP+ problems with replacement, preserving the frozen MBPP+ frame size;
+2. independently resample HumanEval+ problems with replacement, preserving the frozen HumanEval+ frame size;
+3. carry all retained deduplicated candidates for each selected problem;
+4. recompute benchmark-specific statistics;
+5. form the pooled standardized summary using frozen task-frame weights
+   [
+   omega_M=|F_M|/(|F_M|+|F_H|),qquad omega_H=1-omega_M.
+   ]
+
+For (r_1), pool through the weighted numerator/denominator:
+[
+r_{1,mathrm{pool}}
+=
+rac{omega_M b_{1,M}+omega_H b_{1,H}}
+     {omega_M u_{1,M}+omega_H u_{1,H}}.
+]
+
+Report benchmark-specific estimates first, then the task-frame-weighted pooled
+estimate, then an equal-stratum-weight sensitivity (omega_M=omega_H=1/2).
+
+The achieved clustered half-width is reported for every estimate. A half-width
+above 0.02 is labeled **precision-limited**; it does not trigger additional
+sampling after frame exhaustion.
 
 ## D. Paired delta-b inference
 
@@ -104,7 +133,7 @@ Compare 2,000 repeated audit samples per budget by RMSE, median absolute error, 
 
 - non-deduplicated analysis;
 - fixed-pool Clopper--Pearson;
-- MBPP+ fixed robustness run;
+- benchmark-specific MBPP+ and HumanEval+ results plus cross-benchmark heterogeneity;
 - identity-only judge scheme;
 - judge-repeatability sensitivity;
 - DS-null diagnostics including conditional-likelihood value and \(\hat c\).
