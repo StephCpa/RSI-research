@@ -180,6 +180,16 @@ class _LooseNormalizer(ast.NodeTransformer):
         self.scopes.pop()
         return node
 
+    def visit_ClassDef(self, node):
+        if self.scopes:
+            node.name = self._lookup(node.name)
+        node.decorator_list = [self.visit(x) for x in node.decorator_list]
+        node.bases = [self.visit(x) for x in node.bases]
+        node.keywords = [self.visit(x) for x in node.keywords]
+        node.body = _strip_docstring(node.body)
+        node.body = [self.visit(x) for x in node.body]
+        return node
+
     def visit_FunctionDef(self, node):
         return self._visit_function(node)
 
