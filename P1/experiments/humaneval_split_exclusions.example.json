@@ -1,0 +1,10 @@
+{
+  "benchmark": "HumanEval+",
+  "excluded": [
+    {
+      "problem_id": "HumanEval/34",
+      "base_test_count": 1,
+      "exclusion_reason": "BASE_TEST_SPLIT_IMPOSSIBLE"
+    }
+  ]
+}
