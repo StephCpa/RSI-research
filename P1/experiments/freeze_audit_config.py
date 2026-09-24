@@ -87,6 +87,30 @@ def resolve_file(value):
     return p
 
 
+def load_split_exclusion_manifest(path: Path):
+    """Load the frozen JSON split-exclusion manifest.
+
+    Expected shape:
+      {
+        "benchmark": "...",
+        "excluded": [
+          {
+            "problem_id": "...",
+            "base_test_count": 1,
+            "exclusion_reason": "BASE_TEST_SPLIT_IMPOSSIBLE"
+          }
+        ]
+      }
+    """
+    data = json.loads(path.read_text())
+    excluded = data.get("excluded")
+    if not isinstance(excluded, list):
+        raise ValueError(
+            f"{path}: split-exclusion manifest must contain an 'excluded' list"
+        )
+    return data
+
+
 def main():
     if len(sys.argv) != 2:
         raise SystemExit("usage: python freeze_audit_config.py audit_config.json")
@@ -111,6 +135,16 @@ def main():
         missing.append(
             f"protocol_version must equal {EXPECTED_PROTOCOL!r}"
         )
+
+    # HumanEval/34 is preregistered as split-impossible before generation.
+    expected_split_impossible = cfg.get("secondary_stratum", {}).get(
+        "known_split_impossible_problem_ids", []
+    )
+    if "HumanEval/34" not in expected_split_impossible:
+        missing.append(
+            "secondary_stratum.known_split_impossible_problem_ids must include HumanEval/34"
+        )
+
     if missing:
         print("CONFIG NOT FROZEN; fix:")
         for x in missing:
@@ -143,6 +177,29 @@ def main():
         p = resolve_file(value)
         name = str(p.relative_to(HERE) if p.is_relative_to(HERE) else p)
         hashes[name] = sha256_bytes(p.read_bytes())
+
+    # Validate the split-exclusion manifests before freezing their hashes.
+    mbpp_split_path = resolve_file(get(cfg, ("benchmark", "split_exclusion_manifest")))
+    human_split_path = resolve_file(get(cfg, ("secondary_stratum", "split_exclusion_manifest")))
+    load_split_exclusion_manifest(mbpp_split_path)
+    human_manifest = load_split_exclusion_manifest(human_split_path)
+    human34 = [
+        r for r in human_manifest["excluded"]
+        if r.get("problem_id") == "HumanEval/34"
+    ]
+    if len(human34) != 1:
+        raise ValueError(
+            "HumanEval split-exclusion manifest must contain exactly one HumanEval/34 record"
+        )
+    rec = human34[0]
+    if rec.get("exclusion_reason") != "BASE_TEST_SPLIT_IMPOSSIBLE":
+        raise ValueError(
+            "HumanEval/34 exclusion_reason must be BASE_TEST_SPLIT_IMPOSSIBLE"
+        )
+    if int(rec.get("base_test_count", -1)) != 1:
+        raise ValueError(
+            "HumanEval/34 split-exclusion record must have base_test_count=1"
+        )
 
     # Freeze the analysis degrees of freedom too.
     analysis_files = [
