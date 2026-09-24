@@ -1,7 +1,7 @@
 {
   "protocol_version": "audit_prereg_v0_3",
   "benchmark": {
-    "name": null,
+    "name": "MBPP+",
     "version_or_commit": null,
     "problem_manifest": null,
     "visible_suite_definition": null,
@@ -9,19 +9,31 @@
     "base_test_split_seed": 20260919,
     "base_test_split_manifest": null
   },
+  "secondary_stratum": {
+    "name": "HumanEval+",
+    "version_or_commit": null,
+    "problem_manifest": null,
+    "visible_suite_definition": null,
+    "gold_suite_definition": null,
+    "base_test_split_seed": 20260924,
+    "base_test_split_manifest": null
+  },
+  "preflight": {
+    "protocol": "preflight_prereg_v0_3",
+    "target_unique_mbpp_problems": 100,
+    "candidates_per_problem": 2,
+    "reuse_prior_mbpp_preflight_problems_first": true,
+    "prior_mbpp_preflight_union_manifest": null,
+    "final_mbpp_preflight_union_manifest": null,
+    "problem_sample_seed": 20260924
+  },
   "candidate_generation": {
     "model_ids": [],
-    "samples_per_problem": 10,
+    "samples_per_problem_main": 3,
     "temperature": null,
     "top_p": null,
     "max_tokens": null,
-    "seed": 20260919,
-    "extension_rounds_per_problem": [
-      15,
-      20,
-      25,
-      30
-    ]
+    "seed": 20260919
   },
   "judges": [
     {
@@ -40,9 +52,33 @@
     "order_swap": null,
     "negation": null
   },
-  "metamorphic_manifest": null,
-  "candidate_budget": null,
-  "unanimous_target": 2500,
+  "transport": {
+    "retry_backoff_seconds": [
+      2,
+      8,
+      32
+    ],
+    "preflight_complete_row_min": 0.98,
+    "missing_view_sensitivity": [
+      "all_positive",
+      "all_negative"
+    ]
+  },
+  "main_sampling": {
+    "terminal_rule": "FRAME_EXHAUSTED",
+    "candidates_per_problem": 3,
+    "no_gold_dependent_stopping": true,
+    "clustered_halfwidth_aspirational": 0.02,
+    "precision_limited_label_if_exceeded": true,
+    "mbpp_preflight_union_manifest": null,
+    "humaneval_preflight_union_manifest": null,
+    "mbpp_canonical_exclusion_manifest": null,
+    "humaneval_canonical_exclusion_manifest": null,
+    "mbpp_main_frame_manifest": null,
+    "humaneval_main_frame_manifest": null,
+    "pooled_primary_weighting": "eligible_task_frame_size",
+    "pooled_equal_stratum_sensitivity": true
+  },
   "audit_budgets": [
     25,
     50,
@@ -51,12 +87,8 @@
     500,
     1000
   ],
-  "cluster_bootstrap_reps": 10000,
-  "fixed_pool_cp_alpha": 0.05,
-  "preflight_candidates": 50,
-  "fixed_diagnostic_cohort_samples_per_problem": 10,
   "analysis": {
-    "primary_interval": "problem_cluster_bootstrap",
+    "primary_interval": "benchmark_stratified_problem_cluster_bootstrap",
     "cluster_bootstrap_reps": 10000,
     "primary_transformation_estimand": "r0_minus_r1",
     "deduplicate_by": "ast_hash_within_problem",
@@ -70,11 +102,5 @@
   },
   "practical_blind_error_bar": 0.02,
   "judge_quality_upper_bar": 0.4,
-  "fixed_pool_precision_halfwidth_target": 0.02,
-  "robustness_benchmark": {
-    "name": "MBPP+",
-    "version_or_commit": null,
-    "problem_manifest": null,
-    "samples_per_problem": 5
-  }
+  "fixed_pool_precision_halfwidth_target": 0.02
 }
