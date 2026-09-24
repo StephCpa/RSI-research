@@ -221,25 +221,39 @@ The MBPP/580 failure from v0.2 is an example of this rule.
 
 ---
 
-## 5. v0.3 preflight sampling shape
+## 5. v0.3 preflight sampling shape and frame conservation
 
-The preflight itself must emphasize independent problem coverage.
+The v0.3 preflight uses
 
-Use:
+[
+oxed{100 	ext{MBPP+ problems}	imes2 	ext{candidates/problem}}
+]
 
-\[
-\boxed{100\ \text{problems} \times 2\ \text{candidates/problem}}
-\]
+but it must **reuse already-burned preflight problems first**.
 
-uniformly sampled without replacement from the canonical-harness-valid MBPP+
-population using a frozen problem-sample seed.
+Let
 
-This preflight is gold blind.
+[
+B_{12}=B_{v0.1}cup B_{v0.2}
+]
 
-The full post-lock W-only collection, if the preflight passes, uses the broader
-shape in Section 8.
+be the union of MBPP+ problem IDs already used by the two earlier gold-blind
+preflights. Construct the v0.3 preflight problem set as follows:
 
----
+1. include every canonical-harness-valid problem in (B_{12});
+2. if fewer than 100 unique problems are available, fill the remainder by
+   uniform sampling without replacement from previously unused,
+   canonical-harness-valid MBPP+ problems using the frozen v0.3 preflight seed;
+3. never discard an already-burned problem merely to create a fresh 100-problem
+   sample.
+
+Thus the union of all MBPP+ preflight problems after v0.3 is targeted to be
+**100 unique problems total**, not 10+40+100 fresh problems.
+
+This preserves fresh MBPP+ tasks for the confirmatory frame while keeping the
+v0.3 gate evaluation gold blind.
+
+The full post-lock design uses the two-stratum frame in Section 8.
 
 ## 6. Primary preflight freeze gates
 
@@ -324,62 +338,143 @@ No plus/gold label may appear in these artifacts.
 
 ---
 
-## 8. Post-lock main W-only sampling shape
+## 8. Post-lock confirmatory frame: two preregistered benchmark strata
 
-If v0.3 preflight passes and the config is locked, the main W-only collection
-uses many problems and few candidates per problem.
+The earlier (M_{U_1}ge250) stopping target is removed. With MBPP+ v0.2.0
+containing 378 tasks, a strict no-overlap rule plus preflight/canonical
+exclusions can make 250 contributing MBPP+ problems impossible. A nominal
+"up to 400 MBPP+ problems" cap is likewise not a valid stopping rule when the
+eligible frame can be smaller.
 
-Sample in problem batches up to:
+### 8.1 Stratum A — MBPP+
 
-\[
-\boxed{400\ \text{problems} \times 3\ \text{candidates/problem}}.
-\]
+MBPP+ v0.2.0 contains 378 tasks. The main MBPP+ frame is
 
-Problem IDs are sampled without replacement from the canonical-harness-valid
-population using the frozen main-sample seed.
-
-### 8.0 Preflight/main separation
-
-The main sampling frame **excludes every problem used in any gold-blind
-preflight that informed the final design**, including the v0.1, v0.2, and v0.3
-preflight problem IDs.
-
-In particular, none of the 100 v0.3 preflight problems may appear in the
-400-problem main draw.
-
-The excluded-preflight problem manifest is frozen and hashed before the main
-draw. This prevents W-level statistics used to choose or validate the gates
-from re-entering the confirmatory main sample.
-
-Do not extend candidate depth within a problem beyond 3 in v0.3.
-
-### 8.1 W-only stopping rule
-
-After each completed 100-problem batch, count
-
-\[
-M_{U_1}
+[
+F_M
 =
-\#\{\text{problems with at least one AST-distinct }U_1^+\text{ candidate}\}.
-\]
+{	ext{canonical-harness-valid MBPP+ tasks}}
+setminus
+{	ext{all MBPP+ preflight tasks}}.
+]
 
-Stop early only if
+Because v0.3 reuses v0.1/v0.2 tasks first, the union of preflight tasks is
+targeted to be 100 unique MBPP+ problems. Subject to canonical-harness
+exclusions, the main MBPP+ frame is therefore expected to be at most roughly
+278 problems, not 400.
 
-\[
-\boxed{M_{U_1}\ge 250}
-\]
+Every task in (F_M) receives exactly **3 candidate-generation attempts**.
+There is no candidate-depth extension beyond 3.
 
-and all data-quality requirements remain satisfied.
+### 8.2 Stratum B — HumanEval+
 
-Otherwise continue to the next problem batch, up to 400 problems.
+HumanEval+ is preregistered **now**, before the duplication diagnostic and
+before any W-only confirmatory statistic, as a second confirmatory stratum.
 
-The stopping rule uses only W, AST hashes, transport status, and problem IDs.
-It never uses Y / plus / gold.
+Let
 
-The primary cluster bootstrap therefore has a problem-level support target,
-rather than a nominal candidate-count target.
+[
+F_H
+=
+{	ext{canonical-harness-valid HumanEval+ tasks}}
+setminus
+{	ext{any HumanEval+ problems previously used in design-informing preflights}}.
+]
 
----
+HumanEval has 164 tasks before any such exclusions.
+
+Use the same frozen:
+
+- generator model and decoding policy;
+- Judge A / Judge B model IDs;
+- identity / verdict-option-order / negation prompts;
+- A/B base-test split algorithm;
+- retry/missingness policy;
+- AST hashing/deduplication;
+- 5% repeatability rule;
+- gold definition and analysis scripts.
+
+Every task in (F_H) also receives exactly **3 candidate-generation attempts**.
+
+HumanEval+ is not a post-result rescue benchmark. It is part of the
+preregistered two-stratum confirmatory design.
+
+### 8.3 No preflight/main overlap
+
+No problem used in any design-informing preflight may enter its benchmark's
+confirmatory frame. The frozen lock contains:
+
+- MBPP+ preflight-union manifest;
+- HumanEval+ preflight-union manifest (possibly empty);
+- canonical-harness exclusion manifests;
+- final (F_M) and (F_H) manifests.
+
+### 8.4 Main-sample terminal rule: frame exhaustion
+
+The confirmatory W-only collection samples the **entire frozen eligible frame**
+(F_Mcup F_H), subject only to transport completion/exclusion rules already
+preregistered.
+
+There is no early stop based on (M_{U_1}), candidate count, or a W-derived
+proxy once the confirmatory run begins.
+
+The terminal state is explicit:
+
+[
+oxed{	ext{FRAME EXHAUSTED}}
+]
+
+when every eligible problem in both frozen strata has received its three
+candidate attempts and the frozen transport policy has terminated.
+
+If a stratum has fewer eligible problems than anticipated, no replacement is
+drawn from a new benchmark and candidate depth is not increased.
+
+### 8.5 Precision target is an analysis adequacy criterion, not a gold-dependent stopping rule
+
+The desired clustered 95% half-width
+
+[
+h_{mathrm{cluster}}(r_1)le0.02
+]
+
+is retained as an **aspirational precision bar**, but it is **not** used to stop
+sampling because (r_1) requires gold (Y). Using the realized clustered
+half-width as a stopping rule would break the gold-sealed W-only design and
+would require sequential-inference corrections not otherwise part of this
+protocol.
+
+After the full frozen frame is exhausted and gold is opened, report the
+achieved clustered half-width for each benchmark and for the stratified pooled
+estimand. If it exceeds 0.02, label the result **precision-limited** and report
+the achieved interval. Do not rescue precision by:
+
+- generating more candidates per sampled problem;
+- reusing preflight problems;
+- selecting a hard tail;
+- adding a third benchmark after seeing results.
+
+### 8.6 Stratified pooled analysis
+
+Report benchmark-specific estimates (r_{1,M}) and (r_{1,H}) first.
+
+For a pooled summary, use frozen task-frame weights
+
+[
+omega_M
+=
+rac{|F_M|}{|F_M|+|F_H|},
+qquad
+omega_H=1-omega_M.
+]
+
+The pooled estimand is the corresponding task-frame-standardized quantity, and
+the cluster bootstrap resamples problems **within each benchmark stratum**
+while preserving the frozen stratum sizes and weights.
+
+Also report an equal-stratum-weight sensitivity
+(omega_M=omega_H=1/2) so that the larger MBPP+ frame cannot hide
+cross-benchmark heterogeneity.
 
 ## 9. Gold remains sealed through W-only collection
 
@@ -387,10 +482,11 @@ The order is mandatory:
 
 1. pass v0.3 preflight;
 2. write and commit the lock;
-3. collect W-only main sample under Section 8;
-4. freeze candidate manifest, AST hashes, view table, transport exclusions, and
-   repeatability artifacts;
-5. only then execute plus/gold;
+3. collect the full frozen two-stratum W-only frame under Section 8 until
+   FRAME EXHAUSTED;
+4. freeze candidate manifests, AST hashes, view tables, transport exclusions,
+   repeatability artifacts, and final stratum sizes;
+5. only then execute plus/gold for both strata;
 6. run the preregistered clustered analyses.
 
 No outcome-dependent hard-tail selection is permitted.
@@ -413,9 +509,11 @@ preregistration version declared before drawing from it.
 | Completeness | ≥0.995 six-view | ≥0.98 complete rows after frozen retries |
 | Retry policy | transport-only, not fully frozen | initial + 3 retries at 2/8/32 s |
 | Missing views | freeze failure | row exclusion + two extreme imputations |
-| Main sampling shape | candidate-heavy | up to 400 problems ×3 |
-| Preflight/main overlap | unspecified | main excludes all v0.1–v0.3 preflight problems |
-| Main stopping | candidate count | problems contributing to \(U_1^+\) |
+| Main sampling shape | candidate-heavy | census of frozen MBPP+ + HumanEval+ frames, 3 candidates/problem |
+| Preflight reuse | unspecified | v0.3 reuses v0.1/v0.2 MBPP+ problems first |
+| Preflight/main overlap | unspecified | confirmatory frames exclude all design-informing preflight problems |
+| Main stopping | candidate count | no early stop; terminal state is FRAME EXHAUSTED |
+| Precision rule | nominal candidate target | report achieved clustered half-width; >0.02 = precision-limited |
 | Canonical harness failure | observed ad hoc | preregistered base-harness exclusion |
 
 ---
@@ -428,6 +526,11 @@ Therefore v0.3 first diagnoses AST duplication, then — only if the sampler is
 not collapsed — changes generator capability by one step and changes the
 freeze gates to measure the actual unanimity experiment rather than the proxy
 A-pass rate.
+
+Before the duplication diagnostic is run, the sampling-frame arithmetic is
+also frozen: v0.3 reuses already-burned MBPP+ preflight tasks, HumanEval+ is a
+predeclared second confirmatory stratum, and the main run ends by frame
+exhaustion rather than an infeasible contributing-problem target.
 
 **Do not freeze v0.3 until Section 1's duplication diagnostic has been run and
 its result appended below.**
