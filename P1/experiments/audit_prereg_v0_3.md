@@ -9,14 +9,101 @@
 
 ## 1. Split the base tests: screen A and view B
 
-The benchmark's base tests are deterministically split within each problem into two disjoint halves before candidate generation.
+The benchmark's base tests are deterministically split within each problem into
+two disjoint halves before candidate generation.
 
-- **Half A:** screening gate only. Candidates must pass all A tests to enter the audit population.
-- **Half B:** a released non-LLM verifier view \(V_{\mathrm{testB}}\).
+- **Half A:** screening gate only. Candidates must pass all A tests to enter the
+  audit population.
+- **Half B:** a released non-LLM verifier view (V_{mathrm{testB}}).
 
-The split is determined by a frozen integer seed. For a problem with \(K\ge2\) separable base test cases, shuffle case IDs with a problem-specific RNG derived from (split_seed, problem_id), assign \(\lceil K/2\rceil\) to A and the remainder to B. Problems with fewer than two separable base cases are excluded from the primary analysis and listed.
+The split is determined by a frozen integer seed. For a problem with (Kge2)
+separable base test cases, shuffle case IDs with a problem-specific RNG derived
+from ((	ext{split seed},	ext{problem id})), assign
+(lceil K/2ceil) to A and the remainder to B.
 
-The split manifest and seed are hashed in the lock file.
+### 1.1 Known cross-benchmark asymmetry in test-B strength
+
+The two confirmatory strata have very different base-test cardinalities under
+this common split rule.
+
+The dataset audit performed before freeze found:
+
+| stratum | tasks | tasks with exactly 3 base tests | tasks with a 1-test B view | split-impossible |
+|---|---:|---:|---:|---:|
+| MBPP+ v0.2.0 | 378 | 349 | 349 | 0 |
+| HumanEval+ | 164 | 18 | 20 | 1 |
+
+Therefore, for about 92% of MBPP+ tasks, the common split rule produces
+
+[
+|A|=2,qquad |B|=1.
+]
+
+By contrast, HumanEval+ typically has a stronger B view; 98 of its 164 tasks
+have at least 3 tests in B under the frozen split rule.
+
+This asymmetry is preregistered as a known source of cross-benchmark
+heterogeneity. A difference between (r_{1,M}) and (r_{1,H}) cannot be
+interpreted as a pure "benchmark effect"; part of it may reflect the different
+strength of (V_{mathrm{testB}}).
+
+The scheme is nevertheless kept identical across strata because retaining a
+non-LLM view in both benchmarks is preferable to making MBPP+ judges-only.
+
+### 1.2 Screened population is intentionally weaker than standard MBPP base-pass
+
+For the dominant 3-base-test MBPP+ tasks, screening uses only the two A tests
+and the third test is withheld as (V_{mathrm{testB}}).
+
+Thus the MBPP+ analysis population is explicitly
+
+[
+{	ext{passes frozen half-A screen}},
+]
+
+not the usual population that passes all three EvalPlus base tests.
+
+This changes the screened population by design and must be stated whenever
+MBPP+ results are described.
+
+### 1.3 Gold-blind diagnostics for test-B strength
+
+Before any gold result is opened, report separately by benchmark stratum:
+
+[
+d_B
+=
+P(V_{mathrm{testB}}=-1mid A	ext{-pass},	ext{required views complete}),
+]
+
+together with:
+
+- the distribution of (|B|) across eligible problems;
+- candidate-weighted test-B dissent rate;
+- problem-weighted test-B dissent rate;
+- test-B dissent rate stratified by (|B|).
+
+These W-only quantities are descriptive diagnostics of non-LLM view strength
+and are used to interpret cross-benchmark heterogeneity; they do not alter the
+frozen verifier scheme.
+
+### 1.4 Split-impossible exclusion
+
+A task with fewer than two separable base test cases is excluded **before
+candidate generation** with exclusion reason
+
+[
+	exttt{BASE_TEST_SPLIT_IMPOSSIBLE}.
+]
+
+HumanEval/34 is preregistered here as a known split-impossible task because it
+has exactly one base test.
+
+The exclusion decision uses base-test structure only, never plus/gold outcomes.
+Every split-impossible problem is written to a frozen split-exclusion manifest.
+
+The split manifest, split-exclusion manifest, and seed for each benchmark are
+hashed in the lock file.
 
 ## 2. Verifier/check architecture
 
@@ -376,6 +463,7 @@ Before candidate generation, commit:
 - base-test split seed and repeatability seed;
 - MBPP+ and HumanEval+ preflight-union manifests;
 - canonical-harness exclusion manifests for both benchmarks;
+- base-test split-exclusion manifests for both benchmarks, including the preregistered `HumanEval/34` exclusion;
 - frozen confirmatory frame manifests `F_M` and `F_H`;
 - frozen stratum-weight rule.
 
