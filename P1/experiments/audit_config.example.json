@@ -99,7 +99,9 @@
     "pooled_primary_weighting": "eligible_task_frame_size",
     "pooled_equal_stratum_sensitivity": true,
     "mbpp_canonical_harness_results": null,
-    "humaneval_canonical_harness_results": null
+    "humaneval_canonical_harness_results": null,
+    "mbpp_canonical_harness_code": null,
+    "humaneval_canonical_harness_code": null
   },
   "audit_budgets": [
     25,
