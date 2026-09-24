@@ -1,4 +1,4 @@
-problem_id,candidate_id,ast_hash,screen_tests_A,truth,view_tests_B,view_judgeA_identity,view_judgeA_order_swap,view_judgeA_negation,view_judgeB_identity,view_judgeB_order_swap,view_judgeB_negation
-HumanEval_0,example_0001,deadbeef,1,1,1,1,1,1,1,1,1
-HumanEval_0,example_0002,cafebabe,1,-1,1,1,1,1,1,1,1
-HumanEval_1,example_0003,01234567,1,-1,-1,1,-1,1,-1,-1,-1
+benchmark,problem_id,candidate_id,ast_hash,screen_tests_A,test_B_size,truth,view_tests_B,view_judgeA_identity,view_judgeA_order_swap,view_judgeA_negation,view_judgeB_identity,view_judgeB_order_swap,view_judgeB_negation
+MBPP+,Mbpp/2,example_0001,deadbeef,1,1,1,1,1,1,1,1,1,1
+MBPP+,Mbpp/7,example_0002,cafebabe,1,1,-1,1,1,1,1,1,1,1
+HumanEval+,HumanEval/0,example_0003,01234567,1,3,-1,1,1,-1,1,-1,-1,-1
