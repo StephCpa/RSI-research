@@ -2,17 +2,20 @@
   "protocol_version": "audit_prereg_v0_3",
   "benchmark": {
     "name": "MBPP+",
-    "version_or_commit": null,
+    "version_or_commit": "v0.2.0",
     "problem_manifest": null,
     "visible_suite_definition": null,
     "gold_suite_definition": null,
     "base_test_split_seed": 20260919,
     "base_test_split_manifest": null,
-    "split_exclusion_manifest": null
+    "split_exclusion_manifest": null,
+    "dataset_file": null,
+    "dataset_sha256": null,
+    "expected_sha256_prefix": "b54e762755248ca4"
   },
   "secondary_stratum": {
     "name": "HumanEval+",
-    "version_or_commit": null,
+    "version_or_commit": "v0.1.10",
     "problem_manifest": null,
     "visible_suite_definition": null,
     "gold_suite_definition": null,
@@ -21,7 +24,10 @@
     "split_exclusion_manifest": null,
     "known_split_impossible_problem_ids": [
       "HumanEval/34"
-    ]
+    ],
+    "dataset_file": null,
+    "dataset_sha256": null,
+    "expected_sha256_prefix": "42526ec0e7d5f3ee"
   },
   "preflight": {
     "protocol": "preflight_prereg_v0_3",
@@ -82,7 +88,9 @@
     "mbpp_main_frame_manifest": null,
     "humaneval_main_frame_manifest": null,
     "pooled_primary_weighting": "eligible_task_frame_size",
-    "pooled_equal_stratum_sensitivity": true
+    "pooled_equal_stratum_sensitivity": true,
+    "mbpp_canonical_harness_results": null,
+    "humaneval_canonical_harness_results": null
   },
   "audit_budgets": [
     25,
