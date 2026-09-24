@@ -125,8 +125,15 @@ and requires exact equality with the split-exclusion manifest. Thus
 `HumanEval/34` is an asserted consequence of the pinned file, not a manually
 trusted exclusion.
 
-The freeze also recomputes the complete confirmatory frame from the pinned task
-IDs, split exclusions, canonical-harness failures, and preflight-union IDs.
+The freeze also recomputes canonical-harness exclusions from a full per-task
+canonical result table that must cover every pinned task exactly once. The
+result table is tied to the pinned dataset SHA-256 and to the SHA-256 recomputed
+from the configured canonical-harness code file; a hand-written exclusion list
+cannot substitute for this full table.
+
+Finally, the freeze recomputes the complete confirmatory frame from the pinned
+task IDs, split exclusions, canonical-harness failures, and preflight-union
+IDs, and requires exact equality with the frozen main-frame manifest.
 
 ## 2. Verifier/check architecture
 
