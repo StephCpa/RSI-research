@@ -232,3 +232,29 @@ The v0.3 frame design now conserves fresh MBPP+ tasks and removes the infeasible
 
 The lock now requires frozen MBPP+/HumanEval+ frame manifests and hashes both
 the audit and preflight preregistrations.
+
+
+## 14. Test-B strength asymmetry and split-impossible tasks
+
+The common A/B split is retained across MBPP+ and HumanEval+, but its strength
+is explicitly treated as heterogeneous:
+
+- MBPP+ v0.2.0: most tasks yield a one-test B verifier;
+- HumanEval+: B is typically stronger;
+- report test-B dissent by benchmark and by `test_B_size` before opening gold.
+
+The screened MBPP+ population is therefore "passes half-A", not the standard
+"passes all base tests" population.
+
+Tasks with fewer than two separable base tests are excluded before generation
+with reason `BASE_TEST_SPLIT_IMPOSSIBLE`. `HumanEval/34` is preregistered as
+a known exclusion. Templates:
+
+```
+P1/experiments/mbpp_split_exclusions.example.json
+P1/experiments/humaneval_split_exclusions.example.json
+```
+
+`freeze_audit_config.py` hashes both manifests and validates that the
+HumanEval manifest contains exactly one `HumanEval/34` record with
+`base_test_count=1` and the frozen exclusion reason.
