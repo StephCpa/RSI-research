@@ -91,6 +91,8 @@ REQUIRED_PATHS = [
     ("main_sampling", "clustered_halfwidth_aspirational"),
     ("main_sampling", "mbpp_preflight_union_manifest"),
     ("main_sampling", "humaneval_preflight_union_manifest"),
+    ("main_sampling", "mbpp_canonical_harness_code"),
+    ("main_sampling", "humaneval_canonical_harness_code"),
     ("main_sampling", "mbpp_canonical_harness_results"),
     ("main_sampling", "humaneval_canonical_harness_results"),
     ("main_sampling", "mbpp_canonical_exclusion_manifest"),
@@ -311,7 +313,7 @@ def validate_dataset(section, label):
     }
 
 
-def validate_canonical_results(path: Path, dataset_info):
+def validate_canonical_results(path: Path, dataset_info, harness_code_sha256):
     data = load_json(path)
     if data.get("benchmark") != dataset_info["name"]:
         raise ValueError(
@@ -321,8 +323,13 @@ def validate_canonical_results(path: Path, dataset_info):
         raise ValueError(
             f"{path}: dataset_sha256 does not match pinned dataset"
         )
-    harness_sha = data.get("harness_code_sha256")
-    require_full_sha256(harness_sha, f"{path}.harness_code_sha256")
+    harness_sha = require_full_sha256(
+        data.get("harness_code_sha256"), f"{path}.harness_code_sha256"
+    )
+    if harness_sha != harness_code_sha256:
+        raise ValueError(
+            f"{path}: harness_code_sha256 does not match the recomputed harness file hash"
+        )
 
     results = data.get("results")
     if not isinstance(results, list):
@@ -494,13 +501,24 @@ def main():
             f"observed {mbpp['facts']['split_impossible_ids']}"
         )
 
+    mbpp_harness_code = resolve_file(
+        cfg["main_sampling"]["mbpp_canonical_harness_code"]
+    )
+    human_harness_code = resolve_file(
+        cfg["main_sampling"]["humaneval_canonical_harness_code"]
+    )
+    mbpp_harness_sha = sha256_file(mbpp_harness_code)
+    human_harness_sha = sha256_file(human_harness_code)
+
     mbpp_canon = validate_canonical_results(
         resolve_file(cfg["main_sampling"]["mbpp_canonical_harness_results"]),
         mbpp,
+        mbpp_harness_sha,
     )
     human_canon = validate_canonical_results(
         resolve_file(cfg["main_sampling"]["humaneval_canonical_harness_results"]),
         human,
+        human_harness_sha,
     )
     mbpp_canon_ex = compare_canonical_exclusion_manifest(
         resolve_file(cfg["main_sampling"]["mbpp_canonical_exclusion_manifest"]),
@@ -566,6 +584,8 @@ def main():
         ("preflight", "final_mbpp_preflight_union_manifest"),
         ("main_sampling", "mbpp_preflight_union_manifest"),
         ("main_sampling", "humaneval_preflight_union_manifest"),
+        ("main_sampling", "mbpp_canonical_harness_code"),
+        ("main_sampling", "humaneval_canonical_harness_code"),
         ("main_sampling", "mbpp_canonical_harness_results"),
         ("main_sampling", "humaneval_canonical_harness_results"),
         ("main_sampling", "mbpp_canonical_exclusion_manifest"),
