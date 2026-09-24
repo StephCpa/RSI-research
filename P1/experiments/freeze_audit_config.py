@@ -457,6 +457,22 @@ def main():
     mbpp = validate_dataset(cfg["benchmark"], "benchmark")
     human = validate_dataset(cfg["secondary_stratum"], "secondary_stratum")
 
+    # Problem manifests must exactly enumerate the pinned dataset frames.
+    mbpp_problem_manifest = load_problem_id_manifest(
+        resolve_file(cfg["benchmark"]["problem_manifest"])
+    )
+    human_problem_manifest = load_problem_id_manifest(
+        resolve_file(cfg["secondary_stratum"]["problem_manifest"])
+    )
+    if mbpp_problem_manifest != mbpp["task_ids"]:
+        raise ValueError(
+            "MBPP+ problem_manifest does not exactly match the pinned dataset task IDs"
+        )
+    if human_problem_manifest != human["task_ids"]:
+        raise ValueError(
+            "HumanEval+ problem_manifest does not exactly match the pinned dataset task IDs"
+        )
+
     mbpp_split = compare_split_manifest(
         resolve_file(cfg["benchmark"]["split_exclusion_manifest"]),
         mbpp["facts"],
