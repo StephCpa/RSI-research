@@ -179,3 +179,32 @@ python P1/experiments/preflight_duplication_check.py path/to/v0_2_candidates.csv
 The diagnostic accepts CSV or JSONL with `problem_id` plus either `ast_hash`
 or `code`. Do not freeze v0.3 until its duplication branch has been recorded
 in the preregistration.
+
+
+## 12. v0.3 duplication branch (current)
+
+Before the next API preflight, run the hash self-test and then the v0.2
+duplication diagnostic:
+
+```bash
+python P1/experiments/test_duplication_hashes.py
+python P1/experiments/preflight_duplication_check.py path/to/v0_2_candidates.csv
+```
+
+The diagnostic now reports three measures over **all unordered within-problem
+pairs**:
+
+- `raw`: exact response text, used to detect sampler/cache collapse;
+- `strict`: the original AST identity metric, retained for continuity;
+- `loose`: docstrings removed and function-local identifiers alpha-renamed,
+  used to measure genuine solution convergence.
+
+Branches are frozen in `preflight_prereg_v0_3.md`:
+
+- raw duplicate-pair fraction >= 0.25 -> `SAMPLER_COLLAPSE`, do not switch models;
+- otherwise loose duplicate-pair fraction >= 0.25 -> `DUPLICATION_HIGH`;
+- otherwise -> `PROBLEM_LEVEL_HETEROGENEITY`.
+
+Both latter branches proceed to the already frozen generator
+`qwen3.6-flash-2026-04-16`. The main confirmatory problem draw excludes all
+problems used in the v0.1-v0.3 preflights.
