@@ -25,25 +25,42 @@ REQUIRED_PATHS = [
     ("benchmark", "base_test_split_manifest"),
     ("benchmark", "visible_suite_definition"),
     ("benchmark", "gold_suite_definition"),
+    ("secondary_stratum", "name"),
+    ("secondary_stratum", "version_or_commit"),
+    ("secondary_stratum", "problem_manifest"),
+    ("secondary_stratum", "base_test_split_seed"),
+    ("secondary_stratum", "base_test_split_manifest"),
+    ("secondary_stratum", "visible_suite_definition"),
+    ("secondary_stratum", "gold_suite_definition"),
+    ("preflight", "target_unique_mbpp_problems"),
+    ("preflight", "candidates_per_problem"),
+    ("preflight", "prior_mbpp_preflight_union_manifest"),
+    ("preflight", "final_mbpp_preflight_union_manifest"),
+    ("preflight", "problem_sample_seed"),
     ("candidate_generation", "model_ids"),
-    ("candidate_generation", "samples_per_problem"),
+    ("candidate_generation", "samples_per_problem_main"),
     ("candidate_generation", "temperature"),
     ("candidate_generation", "top_p"),
     ("candidate_generation", "max_tokens"),
     ("prompts", "identity"),
     ("prompts", "order_swap"),
     ("prompts", "negation"),
-    ("candidate_budget",),
-    ("unanimous_target",),
+    ("transport", "retry_backoff_seconds"),
+    ("transport", "preflight_complete_row_min"),
+    ("main_sampling", "terminal_rule"),
+    ("main_sampling", "candidates_per_problem"),
+    ("main_sampling", "clustered_halfwidth_aspirational"),
+    ("main_sampling", "mbpp_preflight_union_manifest"),
+    ("main_sampling", "humaneval_preflight_union_manifest"),
+    ("main_sampling", "mbpp_canonical_exclusion_manifest"),
+    ("main_sampling", "humaneval_canonical_exclusion_manifest"),
+    ("main_sampling", "mbpp_main_frame_manifest"),
+    ("main_sampling", "humaneval_main_frame_manifest"),
     ("practical_blind_error_bar",),
     ("judge_quality_upper_bar",),
     ("fixed_pool_precision_halfwidth_target",),
     ("judge_repeatability", "fraction"),
     ("judge_repeatability", "seed"),
-    ("robustness_benchmark", "name"),
-    ("robustness_benchmark", "version_or_commit"),
-    ("robustness_benchmark", "problem_manifest"),
-    ("robustness_benchmark", "samples_per_problem"),
 ]
 
 
@@ -100,14 +117,20 @@ def main():
     file_keys = [
         ("benchmark", "problem_manifest"),
         ("benchmark", "base_test_split_manifest"),
+        ("secondary_stratum", "problem_manifest"),
+        ("secondary_stratum", "base_test_split_manifest"),
+        ("preflight", "prior_mbpp_preflight_union_manifest"),
+        ("preflight", "final_mbpp_preflight_union_manifest"),
+        ("main_sampling", "mbpp_preflight_union_manifest"),
+        ("main_sampling", "humaneval_preflight_union_manifest"),
+        ("main_sampling", "mbpp_canonical_exclusion_manifest"),
+        ("main_sampling", "humaneval_canonical_exclusion_manifest"),
+        ("main_sampling", "mbpp_main_frame_manifest"),
+        ("main_sampling", "humaneval_main_frame_manifest"),
         ("prompts", "identity"),
         ("prompts", "order_swap"),
         ("prompts", "negation"),
     ]
-    if cfg.get("metamorphic_manifest"):
-        file_keys.append(("metamorphic_manifest",))
-    if cfg.get("robustness_benchmark", {}).get("problem_manifest"):
-        file_keys.append(("robustness_benchmark", "problem_manifest"))
 
     hashes = {}
     for path in file_keys:
@@ -124,6 +147,9 @@ def main():
         HERE / "audit_allocation.py",
         HERE / "audit_analysis_spec_v0_1.md",
         HERE / "audit_prereg_v0_3.md",
+        HERE / "preflight_prereg_v0_3.md",
+        HERE / "preflight_duplication_check.py",
+        HERE / "test_duplication_hashes.py",
         HERE / "judge_repeatability.py",
         HERE / "ast_hash.py",
         HERE / "base_test_split.py",
@@ -148,6 +174,8 @@ def main():
     print("analysis_sha256:", hashes["audit_analysis.py"])
     print("goldblind_sha256:", hashes["audit_goldblind.py"])
     print("prereg_sha256:", hashes["audit_prereg_v0_3.md"])
+    print("preflight_prereg_sha256:", hashes["preflight_prereg_v0_3.md"])
+    print("duplication_check_sha256:", hashes["preflight_duplication_check.py"])
     print("analysis_spec_sha256:", hashes["audit_analysis_spec_v0_1.md"])
     print("ds_excess_sha256:", hashes["ds_excess.py"])
     print("allocation_sha256:", hashes["audit_allocation.py"])
