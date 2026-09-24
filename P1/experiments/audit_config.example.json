@@ -11,7 +11,11 @@
     "split_exclusion_manifest": null,
     "dataset_file": null,
     "dataset_sha256": null,
-    "expected_sha256_prefix": "b54e762755248ca4"
+    "expected_sha256_prefix": "b54e762755248ca4",
+    "expected_task_count": 378,
+    "expected_exactly_3_base_tests": 349,
+    "expected_one_test_B_view": 349,
+    "expected_split_impossible_count": 0
   },
   "secondary_stratum": {
     "name": "HumanEval+",
@@ -27,7 +31,12 @@
     ],
     "dataset_file": null,
     "dataset_sha256": null,
-    "expected_sha256_prefix": "42526ec0e7d5f3ee"
+    "expected_sha256_prefix": "42526ec0e7d5f3ee",
+    "expected_task_count": 164,
+    "expected_exactly_3_base_tests": 18,
+    "expected_one_test_B_view": 20,
+    "expected_split_impossible_count": 1,
+    "expected_B_ge3_count": 98
   },
   "preflight": {
     "protocol": "preflight_prereg_v0_3",
