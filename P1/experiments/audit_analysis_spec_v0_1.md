@@ -15,6 +15,30 @@ Within each benchmark, primary rows are:
 All-candidate results are sensitivity analyses. No design-informing preflight
 problem appears in the confirmatory frame.
 
+### A.1 Test-B strength asymmetry
+
+The common A/B split is intentionally kept across both benchmarks, even though
+the resulting non-LLM view has different strength:
+
+- MBPP+ v0.2.0: 349/378 tasks have exactly three base tests, hence a one-test B
+  view under the frozen ceil/floor split;
+- HumanEval+: 20/164 tasks have a one-test B view, while 98/164 have at least
+  three tests in B;
+- HumanEval/34 is excluded before generation as
+  `BASE_TEST_SPLIT_IMPOSSIBLE` because it has one base test.
+
+Before gold, report by benchmark:
+
+[
+P(V_{testB}=-1mid A	ext{-pass},	ext{complete}),
+]
+
+both candidate-weighted and problem-weighted, the problem distribution of
+(|B|), and dissent stratified by (|B|).
+
+Cross-benchmark differences in (r_1) are interpreted as joint benchmark/view
+heterogeneity, not as a pure benchmark effect.
+
 ## B. Primary schemes
 
 \[
