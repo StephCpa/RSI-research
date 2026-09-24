@@ -596,6 +596,7 @@ def main():
         HERE / "judge_repeatability.py",
         HERE / "ast_hash.py",
         HERE / "base_test_split.py",
+        HERE / "dataset_frame_audit.py",
         HERE / "freeze_audit_config.py",
     ]
     for p in analysis_files:
@@ -648,6 +649,7 @@ def main():
     print("repeatability_sha256:", hashes["judge_repeatability.py"])
     print("ast_hash_sha256:", hashes["ast_hash.py"])
     print("base_test_split_sha256:", hashes["base_test_split.py"])
+    print("dataset_frame_audit_sha256:", hashes["dataset_frame_audit.py"])
     print("wrote:", out)
 
 
