@@ -31,7 +31,7 @@ Rules enforced by `freeze_audit_config.py`:
 
 1. `benchmark` must match the configured stratum;
 2. `dataset_sha256` must equal the recomputed hash of the pinned dataset file;
-3. `harness_code_sha256` must be a full 64-hex hash;
+3. `harness_code_sha256` must equal the SHA-256 recomputed from the frozen canonical-harness code file configured for that benchmark;
 4. `results` must cover **every pinned task ID exactly once**;
 5. failed rows must have an exclusion reason;
 6. the canonical-exclusion manifest must equal the set of failed rows exactly;
