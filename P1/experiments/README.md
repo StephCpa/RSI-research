@@ -208,3 +208,27 @@ Branches are frozen in `preflight_prereg_v0_3.md`:
 Both latter branches proceed to the already frozen generator
 `qwen3.6-flash-2026-04-16`. The main confirmatory problem draw excludes all
 problems used in the v0.1-v0.3 preflights.
+
+
+## 13. Frame arithmetic frozen before the duplication diagnostic
+
+The v0.3 frame design now conserves fresh MBPP+ tasks and removes the infeasible
+`M_U1 >= 250` stop:
+
+- the v0.3 MBPP+ preflight reuses the union of v0.1/v0.2 preflight problems
+  first, then draws only enough fresh problems to reach 100 unique preflight
+  tasks;
+- MBPP+ and HumanEval+ are preregistered confirmatory strata;
+- all design-informing preflight problems are excluded from their benchmark's
+  confirmatory frame;
+- each eligible main-frame problem receives exactly three candidate attempts;
+- the main W-only run ends at `FRAME EXHAUSTED`, not at a candidate/problem
+  count target;
+- clustered 95% half-width <= 0.02 is an aspirational post-gold precision bar,
+  not a gold-dependent stopping rule;
+- if the achieved clustered half-width exceeds 0.02, report the estimate as
+  `precision-limited`; do not add candidates, a hard tail, or a third
+  benchmark after seeing gold.
+
+The lock now requires frozen MBPP+/HumanEval+ frame manifests and hashes both
+the audit and preflight preregistrations.
