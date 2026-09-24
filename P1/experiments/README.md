@@ -258,3 +258,36 @@ P1/experiments/humaneval_split_exclusions.example.json
 `freeze_audit_config.py` hashes both manifests and validates that the
 HumanEval manifest contains exactly one `HumanEval/34` record with
 `base_test_count=1` and the frozen exclusion reason.
+
+
+## 15. Pinned dataset verification before freeze
+
+The lock no longer trusts hand-written exclusion manifests.
+
+Run the gold-blind frame audit on the exact local EvalPlus JSONL files:
+
+```bash
+python P1/experiments/dataset_frame_audit.py \
+  --benchmark MBPP+ \
+  --version v0.2.0 \
+  --dataset /path/to/MbppPlus-v0.2.0.jsonl \
+  --outdir /path/to/mbpp_frame
+
+python P1/experiments/dataset_frame_audit.py \
+  --benchmark HumanEval+ \
+  --version v0.1.10 \
+  --dataset /path/to/HumanEvalPlus-v0.1.10.jsonl \
+  --outdir /path/to/humaneval_frame
+```
+
+Expected SHA-256 prefixes are `b54e762755248ca4` and
+`42526ec0e7d5f3ee`. Copy the **full** 64-hex hashes printed by the helper into
+`audit_config.json`.
+
+At freeze, `freeze_audit_config.py` independently re-hashes the files,
+re-parses every task's `base_input`, recomputes the split-impossible set,
+validates the full canonical-harness result tables, derives canonical
+exclusions, and derives the final confirmatory frames. The frozen manifests
+must match those recomputed sets exactly.
+
+See `canonical_harness_manifest_schema.md` for the required full-result schema.
