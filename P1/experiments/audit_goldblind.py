@@ -1,7 +1,7 @@
 """Gold-blind diagnostics for audit preregistration v0.3.
 
 Input CSV must NOT contain truth. Required columns:
-  problem_id, candidate_id, ast_hash, screen_tests_A,
+  benchmark, problem_id, candidate_id, ast_hash, screen_tests_A, test_B_size,
   view_tests_B, and six view_judge* columns.
 
 Primary diagnostics deduplicate within problem by ast_hash, compute u0/u1, the
@@ -31,7 +31,7 @@ def load(path: Path, no_dedup=False):
     if "truth" in rows[0]:
         raise ValueError("gold-blind input must not contain truth")
 
-    required = {"problem_id","candidate_id","ast_hash","screen_tests_A","view_tests_B"}
+    required = {"benchmark","problem_id","candidate_id","ast_hash","screen_tests_A","test_B_size","view_tests_B"}
     missing = required - set(rows[0])
     if missing:
         raise ValueError(f"missing required columns: {sorted(missing)}")
@@ -44,7 +44,7 @@ def load(path: Path, no_dedup=False):
     else:
         seen=set(); keep=[]
         for r in rows:
-            key=(r["problem_id"],r["ast_hash"])
+            key=(r["benchmark"],r["problem_id"],r["ast_hash"])
             if key in seen:
                 continue
             seen.add(key); keep.append(r)
@@ -109,6 +109,60 @@ def main():
     tb=W["view_tests_B"]
     tb_agree={c:float(np.mean(tb==W[c])) for c in judge_cols}
 
+    # Preregistered per-stratum test-B strength diagnostics.
+    benchmarks=np.array([r["benchmark"] for r in rows],dtype=object)
+    problems=np.array([r["problem_id"] for r in rows],dtype=object)
+    bsize=np.array([int(r["test_B_size"]) for r in rows],dtype=int)
+
+    def testb_strength(mask):
+        idx=np.flatnonzero(mask)
+        if len(idx)==0:
+            return {}
+        # Candidate-weighted dissent.
+        cand=float(np.mean(tb[idx]==-1))
+
+        # Problem-weighted dissent: equal weight per benchmark-local problem.
+        pvals=[]
+        for p in sorted(set(problems[idx])):
+            z=idx[problems[idx]==p]
+            pvals.append(float(np.mean(tb[z]==-1)))
+        prob=float(np.mean(pvals)) if pvals else float("nan")
+
+        # Problem-level distribution of |B| (one frozen size per task).
+        bdist={}
+        for p in sorted(set(problems[idx])):
+            z=idx[problems[idx]==p]
+            vals=set(map(int,bsize[z]))
+            if len(vals)!=1:
+                raise ValueError(f"inconsistent test_B_size within problem {p}: {sorted(vals)}")
+            k=next(iter(vals))
+            bdist[str(k)]=bdist.get(str(k),0)+1
+
+        by_size={}
+        for k in sorted(set(map(int,bsize[idx]))):
+            zk=idx[bsize[idx]==k]
+            pv=[]
+            for p in sorted(set(problems[zk])):
+                zp=zk[problems[zk]==p]
+                pv.append(float(np.mean(tb[zp]==-1)))
+            by_size[str(k)]={
+                "candidate_rows":int(len(zk)),
+                "candidate_weighted_dissent":float(np.mean(tb[zk]==-1)),
+                "problem_count":int(len(set(problems[zk]))),
+                "problem_weighted_dissent":float(np.mean(pv)) if pv else float("nan"),
+            }
+
+        return {
+            "candidate_weighted_testB_dissent":cand,
+            "problem_weighted_testB_dissent":prob,
+            "B_size_problem_distribution":bdist,
+            "testB_dissent_by_B_size":by_size,
+        }
+
+    by_stratum={}
+    for b in sorted(set(benchmarks)):
+        by_stratum[str(b)]=testb_strength(benchmarks==b)
+
     summary={
         "n_raw":raw_n,
         "n_ast_dedup":len(rows),
@@ -119,6 +173,7 @@ def main():
         "n_u1":int(u1.sum()),
         "marginal_acceptance":{c:float(np.mean(W[c]==1)) for c in full},
         "testB_agreement_with_llm":tb_agree,
+        "testB_strength_by_stratum":by_stratum,
         "llm_view_order":judge_cols,
     }
 
