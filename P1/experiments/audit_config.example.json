@@ -7,7 +7,8 @@
     "visible_suite_definition": null,
     "gold_suite_definition": null,
     "base_test_split_seed": 20260919,
-    "base_test_split_manifest": null
+    "base_test_split_manifest": null,
+    "split_exclusion_manifest": null
   },
   "secondary_stratum": {
     "name": "HumanEval+",
@@ -16,7 +17,11 @@
     "visible_suite_definition": null,
     "gold_suite_definition": null,
     "base_test_split_seed": 20260924,
-    "base_test_split_manifest": null
+    "base_test_split_manifest": null,
+    "split_exclusion_manifest": null,
+    "known_split_impossible_problem_ids": [
+      "HumanEval/34"
+    ]
   },
   "preflight": {
     "protocol": "preflight_prereg_v0_3",
@@ -94,7 +99,13 @@
     "deduplicate_by": "ast_hash_within_problem",
     "ds_excess_starts": 12,
     "allocation_reps": 2000,
-    "deployed_gate": "testB_positive_and_at_least_4_of_6_llm_views_positive"
+    "deployed_gate": "testB_positive_and_at_least_4_of_6_llm_views_positive",
+    "testB_strength_diagnostics": {
+      "report_by_stratum": true,
+      "report_problem_weighted": true,
+      "report_candidate_weighted": true,
+      "report_by_B_size": true
+    }
   },
   "judge_repeatability": {
     "fraction": 0.05,
