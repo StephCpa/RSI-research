@@ -116,7 +116,7 @@
     "primary_interval": "benchmark_stratified_problem_cluster_bootstrap",
     "cluster_bootstrap_reps": 10000,
     "primary_transformation_estimand": "r0_minus_r1",
-    "deduplicate_by": "ast_hash_within_problem",
+    "deduplicate_by": "none (raw candidate pool is primary; loose and strict dedup are sensitivity tiers via ast_hash.apply_dedup)",
     "ds_excess_starts": 12,
     "allocation_reps": 2000,
     "deployed_gate": "testB_positive_and_at_least_4_of_6_llm_views_positive",
