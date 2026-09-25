@@ -35,6 +35,7 @@ EXPECTED_DATASETS = {
         "exactly_3_base_tests": 349,
         "one_test_B_view": 349,
         "split_impossible_count": 0,
+        "B_ge3_count": 3,
     },
     "HumanEval+": {
         "version": "v0.1.10",
