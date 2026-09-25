@@ -545,12 +545,21 @@ its result appended below.**
 ### Duplication diagnostic result
 
 - planned weaker generator fixed before diagnostic: `qwen3.6-flash-2026-04-16`
-- v0.2 usable within-problem pairs: **TO FILL**
-- raw equal-pair fraction (q_{dup}^{raw}): **TO FILL**
-- strict AST equal-pair fraction (q_{dup}^{strict}): **TO FILL**
-- loose AST equal-pair fraction (q_{dup}^{loose}): **TO FILL**
-- syntax-error rows: **TO FILL**
-- branch: **TO FILL — SAMPLER_COLLAPSE / DUPLICATION_HIGH / PROBLEM_LEVEL_HETEROGENEITY**
-- generator switch allowed by branch: **TO FILL**
-- optional cache/fingerprint metadata finding: **TO FILL / unavailable**
-- action taken before v0.3 API calls: **TO FILL**
+- v0.2 usable rows: **80**
+- v0.2 usable within-problem pairs: **40**
+- raw equal-pair fraction (q_{dup}^{raw}): **4/40 = 0.100**
+- strict AST equal-pair fraction (q_{dup}^{strict}): **5/40 = 0.125**
+- loose AST equal-pair fraction (q_{dup}^{loose}): **17/40 = 0.425**
+- A-pass loose equal-pair fraction: **16/36 = 0.444444**
+- syntax-error rows: **0**
+- missing-code rows: **0**
+- provider cached-token metadata: **80/80 rows report cached_tokens=0**
+- provider fingerprint metadata: **unavailable**
+- branch: **DUPLICATION_HIGH**
+- generator switch allowed by branch: **YES**
+- action taken before v0.3 API calls: **proceed to the already-frozen generator `qwen3.6-flash-2026-04-16`; retain many-problems/few-candidates sampling; do not use a hard tail**
+- gold accessed during diagnostic: **NO**
+- external API calls during diagnostic: **NO**
+
+The full diagnostic record is in
+`preflight_duplication_result_v0_2.md`.
