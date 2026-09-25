@@ -10,12 +10,13 @@
     "base_test_split_manifest": null,
     "split_exclusion_manifest": null,
     "dataset_file": null,
-    "dataset_sha256": null,
+    "dataset_sha256": "b54e762755248ca411b523c917fa9f93c07b5ff2966bf60b3917b853926a3dad",
     "expected_sha256_prefix": "b54e762755248ca4",
     "expected_task_count": 378,
     "expected_exactly_3_base_tests": 349,
     "expected_one_test_B_view": 349,
-    "expected_split_impossible_count": 0
+    "expected_split_impossible_count": 0,
+    "expected_B_ge3_count": 3
   },
   "secondary_stratum": {
     "name": "HumanEval+",
@@ -30,7 +31,7 @@
       "HumanEval/34"
     ],
     "dataset_file": null,
-    "dataset_sha256": null,
+    "dataset_sha256": "42526ec0e7d5f3ee0b06d6ced98f8c8bae3d76519151bfb3d36f79010645bd7f",
     "expected_sha256_prefix": "42526ec0e7d5f3ee",
     "expected_task_count": 164,
     "expected_exactly_3_base_tests": 18,
