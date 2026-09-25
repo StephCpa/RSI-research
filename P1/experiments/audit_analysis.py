@@ -2,8 +2,12 @@
 
 Primary population:
   - passed screen A,
-  - AST-deduplicated within problem,
+  - raw candidate pool (no deduplication),
   - clustered inference by problem.
+
+Deduplication is a sensitivity tier: --dedup loose (structural-solution
+estimand; requires a code or loose_ast_sha256 column) or --dedup strict
+(continuity with v0.1/v0.2 reports).
 
 Model-based excess unanimity and audit-allocation efficiency are implemented in
 separate frozen scripts (ds_excess.py and audit_allocation.py).
@@ -36,7 +40,38 @@ def cp_interval(k,n,alpha=.05):
     return lo,hi
 
 
-def load(path,no_dedup=False):
+def _loose_hash_column(rows):
+    """Loose AST hash per row: prefer a precomputed loose_ast_sha256 column,
+    else compute from code. Unparseable rows are kept unique and counted."""
+    have_pre = "loose_ast_sha256" in rows[0]
+    have_code = "code" in rows[0]
+    if not have_pre and not have_code:
+        raise ValueError(
+            "--dedup loose requires a 'code' or 'loose_ast_sha256' column"
+        )
+    from ast_hash import loose_ast_sha256
+
+    keys = []
+    unparsed = 0
+    for r in rows:
+        pre = r.get("loose_ast_sha256", "") if have_pre else ""
+        if pre:
+            keys.append(pre)
+            continue
+        code = r.get("code")
+        if code is None:
+            raise ValueError(
+                f"row {r.get('candidate_id', '?')} has neither loose hash nor code"
+            )
+        try:
+            keys.append(loose_ast_sha256(code))
+        except SyntaxError:
+            unparsed += 1
+            keys.append("__unparsed__" + str(r.get("candidate_id", "")))
+    return keys, unparsed
+
+
+def load(path,no_dedup=False,dedup="none"):
     with Path(path).open(newline="") as f:
         rows=list(csv.DictReader(f))
     if not rows:
@@ -49,15 +84,26 @@ def load(path,no_dedup=False):
         raise ValueError("table contains candidates that failed screen A")
 
     raw_n=len(rows)
-    if no_dedup:
+    loose_unparsed=0
+    if dedup=="none":
         keep=rows
-    else:
+    elif dedup=="strict":
         seen=set(); keep=[]
         for r in rows:
             key=(r["problem_id"],r["ast_hash"])
             if key in seen:
                 continue
             seen.add(key); keep.append(r)
+    elif dedup=="loose":
+        hashes,loose_unparsed=_loose_hash_column(rows)
+        seen=set(); keep=[]
+        for r,h in zip(rows,hashes):
+            key=(r["problem_id"],h)
+            if key in seen:
+                continue
+            seen.add(key); keep.append(r)
+    else:
+        raise ValueError(f"unknown dedup mode: {dedup!r}")
 
     truth=np.array([int(r["truth"]) for r in keep],dtype=int)
     if not np.all(np.isin(truth,[-1,1])):
@@ -68,7 +114,7 @@ def load(path,no_dedup=False):
         if not np.all(np.isin(v,[-1,1])):
             raise ValueError(f"{c} must be +/-1")
     problem=np.array([r["problem_id"] for r in keep],dtype=object)
-    return rows,keep,problem,truth,W,raw_n
+    return rows,keep,problem,truth,W,raw_n,dedup,loose_unparsed
 
 
 def scheme(W,cols):
@@ -214,12 +260,14 @@ def main():
     p.add_argument("--practical-bar",type=float,default=.02)
     p.add_argument("--judge-bad-bar",type=float,default=.40)
     p.add_argument("--precision-halfwidth",type=float,default=.02)
-    p.add_argument("--no-dedup",action="store_true")
+    p.add_argument("--dedup",choices=["none","loose","strict"],default="none",
+                   help="primary pool is 'none' (raw candidate draws); "
+                        "'loose' and 'strict' are sensitivity tiers")
     p.add_argument("--output",default=None)
     a=p.parse_args()
 
     path=Path(a.input_csv)
-    raw,rows,problem,truth,W,raw_n=load(path,no_dedup=a.no_dedup)
+    raw,rows,problem,truth,W,raw_n,dedup,loose_unparsed=load(path,dedup=a.dedup)
     full=a.full_views or list(W.keys())
     u0=scheme(W,a.baseline_views); u1=scheme(W,full)
 
@@ -265,8 +313,10 @@ def main():
 
     summary={
         "n_raw":raw_n,
+        "dedup_mode":dedup,
         "n_primary":len(rows),
         "duplicate_fraction":1-len(rows)/raw_n,
+        "loose_unparsed_rows":loose_unparsed,
         "point":point,
         "cluster95":{
             "r0":ci(boot["r0"]),

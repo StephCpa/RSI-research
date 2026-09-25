@@ -269,14 +269,57 @@ The repeated call uses the exact same model ID, prompt bytes, API parameters, an
 
 Report flip rate overall, by judge, by check, and by judge × check.
 
-## 7. Deduplication and effective sample size
+## 7. Candidate pool, deduplication tiers, and effective sample size
 
-Primary generalization analyses deduplicate within problem by the SHA-256 hash of
+Revision note (pre-v0.3-API, gold-blind, before any confirmatory W statistic):
+this section was revised after the completed MBPP+ v0.2 duplication diagnostic
+(branch `DUPLICATION_HIGH`, unchanged) and before any v0.3 API call. The
+revision changes the confirmatory estimand and analysis tiers only; it does not
+reopen or recompute the completed duplication diagnostic history.
+
+### 7.1 Primary estimand and primary pool
+
+The primary estimand is the **candidate-draw-level false-accept rate under the
+frozen generator proposal distribution**:
+
 \[
-\texttt{ast.dump(ast.parse(code), annotate_fields=True, include_attributes=False)}.
+r_1
+=
+P\left(Y=-1 \mid U_1^+,\ \text{candidate draw from the frozen generator}\right).
 \]
 
-The first occurrence is retained. Raw-pool results are reported as a sensitivity analysis.
+The primary analysis pool is the **raw candidate pool**: every A-pass candidate
+draw enters the primary analysis, with no deduplication. Within-problem
+dependence is handled by problem-level cluster bootstrap (Section 10), which is
+the appropriate correction; deduplication is a cruder substitute for it.
+
+Text-level deduplication must not define the primary pool because it deletes
+verifier stochasticity. Identical code can receive different verdicts across
+independent judge calls, so W is a property of the (candidate draw, judge call)
+pair, not of the code text. Removing even exact duplicate draws would remove
+genuine verifier-repeatability variation, which the primary estimand includes
+by definition.
+
+### 7.2 Sensitivity tiers
+
+Two deduplicated pools are reported as sensitivity analyses with distinct
+estimands:
+
+- **Loose dedup (main sensitivity):** collapse alpha-equivalent programs
+  (module/function/class docstrings removed, function-local identifiers
+  alpha-renamed by binding order; the frozen `loose_ast_sha256` from
+  `ast_hash.py`). First occurrence per (benchmark, problem) is retained. This
+  approximates the *structural-solution-level* false-accept rate after
+  collapsing alpha-equivalent programs.
+- **Strict dedup (continuity / legacy sensitivity only):** first occurrence
+  per (benchmark, problem) of the SHA-256 hash of
+  \[
+  \texttt{ast.dump(ast.parse(code), annotate_fields=True, include_attributes=False)}.
+  \]
+  This preserves comparability with v0.1/v0.2 reports. It does not determine
+  the primary \(r_1\).
+
+No deduplication tier overrides the raw-pool primary result.
 
 ## 8. Confirmatory sampling frame and precision
 
@@ -386,7 +429,9 @@ Within each bootstrap replicate:
    (|F_M|);
 2. independently resample HumanEval+ problem IDs with replacement from (F_H),
    preserving (|F_H|);
-3. carry all retained AST-deduplicated candidates for each selected problem;
+3. carry all candidate draws for each selected problem (raw pool; sensitivity
+   replicates instead carry the loose- or strict-deduplicated first
+   occurrences per Section 7.2);
 4. recompute benchmark-specific and pooled statistics.
 
 Report benchmark-specific (r_{1,M}) and (r_{1,H}) first.

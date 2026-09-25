@@ -4,9 +4,11 @@ Input CSV must NOT contain truth. Required columns:
   benchmark, problem_id, candidate_id, ast_hash, screen_tests_A, test_B_size,
   view_tests_B, and six view_judge* columns.
 
-Primary diagnostics deduplicate within problem by ast_hash, compute u0/u1, the
-6x6 LLM-view disagreement and phi matrices, test-B agreement, marginal
-acceptance, and duplicate rate.
+Primary diagnostics analyze the raw candidate pool (no deduplication), compute
+u0/u1, the 6x6 LLM-view disagreement and phi matrices, test-B agreement,
+marginal acceptance, and duplicate rate. Deduplication is a sensitivity tier:
+--dedup loose (structural-solution estimand; requires a code or
+loose_ast_sha256 column) or --dedup strict (continuity with v0.1/v0.2).
 """
 from __future__ import annotations
 
@@ -23,7 +25,38 @@ DEFAULT_BASELINE = [
 ]
 
 
-def load(path: Path, no_dedup=False):
+def _loose_hash_column(rows):
+    """Loose AST hash per row: prefer a precomputed loose_ast_sha256 column,
+    else compute from code. Unparseable rows are kept unique and counted."""
+    have_pre = "loose_ast_sha256" in rows[0]
+    have_code = "code" in rows[0]
+    if not have_pre and not have_code:
+        raise ValueError(
+            "--dedup loose requires a 'code' or 'loose_ast_sha256' column"
+        )
+    from ast_hash import loose_ast_sha256
+
+    keys = []
+    unparsed = 0
+    for r in rows:
+        pre = r.get("loose_ast_sha256", "") if have_pre else ""
+        if pre:
+            keys.append(pre)
+            continue
+        code = r.get("code")
+        if code is None:
+            raise ValueError(
+                f"row {r.get('candidate_id', '?')} has neither loose hash nor code"
+            )
+        try:
+            keys.append(loose_ast_sha256(code))
+        except SyntaxError:
+            unparsed += 1
+            keys.append("__unparsed__" + str(r.get("candidate_id", "")))
+    return keys, unparsed
+
+
+def load(path: Path, dedup="none"):
     with path.open(newline="") as f:
         rows = list(csv.DictReader(f))
     if not rows:
@@ -39,15 +72,26 @@ def load(path: Path, no_dedup=False):
         raise ValueError("gold-blind table contains candidates that failed screen A")
 
     raw_n = len(rows)
-    if no_dedup:
+    loose_unparsed = 0
+    if dedup == "none":
         keep = rows
-    else:
+    elif dedup == "strict":
         seen=set(); keep=[]
         for r in rows:
             key=(r["benchmark"],r["problem_id"],r["ast_hash"])
             if key in seen:
                 continue
             seen.add(key); keep.append(r)
+    elif dedup == "loose":
+        hashes, loose_unparsed = _loose_hash_column(rows)
+        seen=set(); keep=[]
+        for r,h in zip(rows,hashes):
+            key=(r["benchmark"],r["problem_id"],h)
+            if key in seen:
+                continue
+            seen.add(key); keep.append(r)
+    else:
+        raise ValueError(f"unknown dedup mode: {dedup!r}")
 
     view_cols=[c for c in keep[0] if c.startswith("view_")]
     judge_cols=[c for c in view_cols if c.startswith("view_judge")]
@@ -57,7 +101,7 @@ def load(path: Path, no_dedup=False):
     for c,v in W.items():
         if not np.all(np.isin(v,[-1,1])):
             raise ValueError(f"{c} must be +/-1")
-    return rows,keep,W,judge_cols,raw_n
+    return rows,keep,W,judge_cols,raw_n,dedup,loose_unparsed
 
 
 def matrix(cols,W,kind="agreement"):
@@ -86,12 +130,14 @@ def main():
     p.add_argument("input_csv")
     p.add_argument("--baseline-views",nargs="+",default=DEFAULT_BASELINE)
     p.add_argument("--full-views",nargs="+",default=None)
-    p.add_argument("--no-dedup",action="store_true")
+    p.add_argument("--dedup",choices=["none","loose","strict"],default="none",
+                   help="primary pool is 'none' (raw candidate draws); "
+                        "'loose' and 'strict' are sensitivity tiers")
     p.add_argument("--output",default=None)
     a=p.parse_args()
 
     path=Path(a.input_csv)
-    raw,rows,W,judge_cols,raw_n=load(path,no_dedup=a.no_dedup)
+    raw,rows,W,judge_cols,raw_n,dedup,loose_unparsed=load(path,dedup=a.dedup)
     full=a.full_views or list(W.keys())
     for c in a.baseline_views+full:
         if c not in W:
@@ -165,8 +211,10 @@ def main():
 
     summary={
         "n_raw":raw_n,
-        "n_ast_dedup":len(rows),
+        "dedup_mode":dedup,
+        "n_analyzed":len(rows),
         "duplicate_fraction":1-len(rows)/raw_n,
+        "loose_unparsed_rows":loose_unparsed,
         "u0":float(np.mean(u0)),
         "u1":float(np.mean(u1)),
         "n_u0":int(u0.sum()),

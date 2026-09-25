@@ -124,8 +124,10 @@ Before the real audit pilot, use:
 
 These supersede the earlier pre-freeze audit versions.
 
-The v0.3 design splits base tests into screen-A and verifier-view-B, uses AST
-deduplication, includes a 5% judge-repeatability sample, preregisters MBPP+ as a
+The v0.3 design splits base tests into screen-A and verifier-view-B, analyzes
+the raw candidate pool with problem-clustered inference (loose/strict AST
+deduplication as preregistered sensitivity tiers), includes a 5%
+judge-repeatability sample, preregisters MBPP+ as a
 robustness benchmark, and adds an independent-error excess-unanimity analysis.
 
 ## 9. Excess unanimity and allocation analyses

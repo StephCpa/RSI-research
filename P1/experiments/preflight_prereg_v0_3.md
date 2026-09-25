@@ -272,7 +272,29 @@ The preflight may freeze only if:
 - requested candidate count completes;
 - extraction success is reported;
 - successful-HTTP judge parse rate is at least 0.995;
-- complete required-view row rate after the frozen retry budget is at least 0.98.
+- complete required-view row rate after the frozen retry budget is at least 0.98;
+- every successful generation and judge HTTP response returns the
+  preregistered model identifier exactly (`returned_model == requested_model`,
+  byte-for-byte, for the generator, judge A, and judge B).
+
+### 6.1.1 Model-identity gate
+
+Every successful generation and judge response must return the preregistered
+model identifier exactly. Any mismatch blocks freeze. Provider aliases are
+accepted only if an explicit alias-to-snapshot mapping was documented and
+frozen before the affected run.
+
+Each successful response must record `requested_model`, `returned_model`,
+`provider`, `candidate_id`, and `check_id`.
+
+A model-identity mismatch is an availability failure, not a transport failure:
+it is not retried under Section 3.1 and is not covered by the Section 3.2
+missing-view policy. If a provider persistently returns an alias for a dated
+snapshot request (for example `qwen3.6-flash` when `qwen3.6-flash-2026-04-16`
+was requested), the run stops, the provider's official mapping is checked, an
+explicit alias-to-snapshot mapping is frozen in a new preregistration version,
+and only then is the affected run repeated. No post-hoc "probably the same
+model" acceptance is permitted.
 
 ### 6.2 Unanimity-stratum gate
 
@@ -563,3 +585,31 @@ its result appended below.**
 
 The full diagnostic record is in
 `preflight_duplication_result_v0_2.md`.
+
+### Duplication diagnostic history (rule-version continuity)
+
+An earlier local run (E06, 2026-09-20T01:57:26Z) executed the then-frozen
+single-metric rule — strict AST q_dup versus 0.25 — and classified
+`PROBLEM_LEVEL_HETEROGENEITY`. The three-level raw/strict/loose rule was
+frozen afterwards, in commit `b564ffd` (2026-09-24T17:35:13Z), and the
+three-level diagnostic was executed 2026-09-25T07:17:50Z, producing the
+`DUPLICATION_HIGH` result recorded above. The rule change did not create the
+observed action: the only branch that would have changed the action was
+`SAMPLER_COLLAPSE`, and the observed raw duplication rate (4/40 = 0.100) is
+well below its preregistered threshold (0.25). Both the old-rule and new-rule
+classifications permit the same preregistered action — the generator switch —
+so no decision depended on the rule change.
+
+### Clustering decomposition
+
+All 40 within-problem pairs were concordant on A-pass (36 problems 2/2, 4
+problems 0/2, none 1/2). 17/40 pairs are loose-identical and therefore
+behaviourally equivalent by construction. The remaining 23/40 pairs pair
+structurally different solutions that were nonetheless concordant as well,
+and 2 of the 3 genuine generator 0/2 failures (Mbpp/264, Mbpp/722) produced
+two distinct solutions each — Mbpp/580 is the harness-canonical failure, and
+Mbpp/777 is the only loose-duplicate 0/2 failure. The all-or-none pattern
+therefore reflects structural convergence **and** problem-level difficulty
+jointly, not the former alone; `DUPLICATION_HIGH` must not be read as a
+complete mechanistic account of the clustering. Both components favour the
+many-problems / few-candidates sampling shape.

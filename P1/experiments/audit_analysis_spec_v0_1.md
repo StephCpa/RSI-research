@@ -2,6 +2,12 @@
 
 This document is hashed by freeze_audit_config.py and is part of the preregistration lock.
 
+Revision (pre-v0.3-API, gold-blind, before any confirmatory W statistic): the
+primary pool changed from the strict-AST-deduplicated pool to the raw candidate
+pool with problem-clustered inference. Loose and strict deduplication are
+demoted to preregistered sensitivity tiers (Section A.2). The completed MBPP+
+v0.2 duplication diagnostic and its `DUPLICATION_HIGH` branch are unchanged.
+
 ## A. Primary population
 
 Primary rows are drawn from two frozen benchmark strata, MBPP+ and HumanEval+.
@@ -10,10 +16,25 @@ Within each benchmark, primary rows are:
 
 1. passed base-test screen A;
 2. valid frozen candidate/view joins;
-3. first occurrence of each `(benchmark, problem_id, ast_hash)` tuple.
+3. **all candidate draws** (no deduplication; the raw candidate pool).
 
-All-candidate results are sensitivity analyses. No design-informing preflight
-problem appears in the confirmatory frame.
+The primary estimand is the candidate-draw-level false-accept rate under the
+frozen generator proposal distribution. Within-problem dependence is addressed
+by problem-level cluster bootstrap, not by candidate removal. No
+design-informing preflight problem appears in the confirmatory frame.
+
+### A.2 Deduplication sensitivity tiers
+
+Deduplicated pools are reported as sensitivity analyses with distinct estimands:
+
+- **loose dedup (main sensitivity):** first occurrence per
+  `(benchmark, problem_id, loose_ast_sha256)`, where the loose hash strips
+  docstrings and alpha-renames function-local identifiers (`ast_hash.py`);
+  approximates the structural-solution-level false-accept rate. Computable
+  from a `code` or `loose_ast_sha256` column.
+- **strict dedup (continuity / legacy sensitivity):** first occurrence per
+  `(benchmark, problem_id, ast_hash)`; preserves comparability with v0.1/v0.2
+  reports and does not determine the primary r_1.
 
 ### A.1 Test-B strength asymmetry
 
@@ -57,7 +78,9 @@ Within each replicate:
 
 1. resample MBPP+ problems with replacement, preserving the frozen MBPP+ frame size;
 2. independently resample HumanEval+ problems with replacement, preserving the frozen HumanEval+ frame size;
-3. carry all retained deduplicated candidates for each selected problem;
+3. carry all candidate draws for each selected problem (raw pool; sensitivity
+   replicates instead carry the loose- or strict-deduplicated first
+   occurrences per Section A.2);
 4. recompute benchmark-specific statistics;
 5. form the pooled standardized summary using frozen task-frame weights
    [
@@ -155,7 +178,8 @@ Compare 2,000 repeated audit samples per budget by RMSE, median absolute error, 
 
 ## I. Robustness
 
-- non-deduplicated analysis;
+- loose-deduplicated analysis (main sensitivity; structural-solution estimand);
+- strict-deduplicated analysis (continuity with v0.1/v0.2 reports);
 - fixed-pool Clopper--Pearson;
 - benchmark-specific MBPP+ and HumanEval+ results plus cross-benchmark heterogeneity;
 - identity-only judge scheme;
