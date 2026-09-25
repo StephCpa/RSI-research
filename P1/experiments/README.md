@@ -291,3 +291,36 @@ exclusions, and derives the final confirmatory frames. The frozen manifests
 must match those recomputed sets exactly.
 
 See `canonical_harness_manifest_schema.md` for the required full-result schema.
+
+
+## 16. MBPP+ v0.2 duplication diagnostic completed
+
+The frozen three-level diagnostic has now been run on the original v0.2
+candidate artifact.
+
+Observed:
+
+- raw q_dup = 4/40 = 0.100
+- strict q_dup = 5/40 = 0.125
+- loose q_dup = 17/40 = 0.425
+- A-pass loose q_dup = 16/36 = 0.444444
+- syntax errors = 0
+- missing code = 0
+- cached_tokens = 0 for all 80 generator responses
+
+Frozen branch:
+
+```
+DUPLICATION_HIGH
+```
+
+The sampler is therefore not classified as collapsed, and the already-frozen
+generator switch to `qwen3.6-flash-2026-04-16` is allowed.
+
+Full audit-trail record:
+
+```
+P1/experiments/preflight_duplication_result_v0_2.md
+```
+
+Gold was not accessed and no API call was made during this diagnostic.
