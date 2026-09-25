@@ -275,7 +275,11 @@ Revision note (pre-v0.3-API, gold-blind, before any confirmatory W statistic):
 this section was revised after the completed MBPP+ v0.2 duplication diagnostic
 (branch `DUPLICATION_HIGH`, unchanged) and before any v0.3 API call. The
 revision changes the confirmatory estimand and analysis tiers only; it does not
-reopen or recompute the completed duplication diagnostic history.
+reopen or recompute the completed duplication diagnostic history. The
+excess-unanimity (`ds_excess.py`) and allocation (`audit_allocation.py`)
+scripts are aligned to these same tiers by the companion commit "Align dedup
+tiers in ds_excess and audit_allocation via shared apply_dedup", which
+immediately follows this revision on main and also precedes any v0.3 API call.
 
 ### 7.1 Primary estimand and primary pool
 

@@ -154,7 +154,10 @@ deployed gate rather than the unanimous-stratum rate alone.
 The local collector should use:
 
 - `base_test_split.py` for deterministic A/B splitting;
-- `ast_hash.py` for within-problem AST deduplication;
+- `ast_hash.py` for the hash keys of the deduplication sensitivity tiers
+  (the collector computes `raw_sha256`, `ast_hash`, and `loose_ast_sha256`
+  per candidate at collection time; code text stays in the JSONL candidate
+  store keyed by `candidate_id`);
 - `judge_repeatability.py select` before repeat calls and
   `judge_repeatability.py analyze` after them.
 

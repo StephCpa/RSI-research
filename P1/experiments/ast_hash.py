@@ -258,3 +258,92 @@ def hash_triplet(code: str):
         "strict": strict_ast_sha256(code),
         "loose": loose_ast_sha256(code),
     }
+
+
+def apply_dedup(rows, mode="none"):
+    """Apply a preregistered deduplication tier to candidate rows.
+
+    Modes:
+      "none":   raw candidate pool (primary); every row is kept.
+      "strict": first occurrence per (benchmark, problem_id, ast_hash).
+      "loose":  first occurrence per (benchmark, problem_id, loose hash),
+                using a precomputed loose_ast_sha256 column when present and
+                otherwise computing it from a code column.
+
+    A blank or unparseable hash never collapses rows: such rows are kept as
+    their own unique entries and counted (loose_unparsed_rows in loose mode,
+    blank_hash_rows in strict mode). The dedup key includes the benchmark
+    column when the table has one, so the same helper serves tables with and
+    without a benchmark column.
+
+    Returns (kept_rows, stats) where stats records dedup_mode, n_raw,
+    n_analyzed, duplicate_fraction, loose_unparsed_rows, and blank_hash_rows.
+    """
+    if mode == "none":
+        keep = list(rows)
+        return keep, {
+            "dedup_mode": "none",
+            "n_raw": len(rows),
+            "n_analyzed": len(keep),
+            "duplicate_fraction": 0.0,
+            "loose_unparsed_rows": 0,
+            "blank_hash_rows": 0,
+        }
+    if mode not in ("strict", "loose"):
+        raise ValueError(f"unknown dedup mode: {mode!r}")
+
+    if mode == "strict":
+        if "ast_hash" not in rows[0]:
+            raise ValueError("strict dedup needs an 'ast_hash' column")
+        hashes = [str(r.get("ast_hash") or "").strip() for r in rows]
+        blank = sum(1 for h in hashes if not h)
+        unparsed = 0
+    else:
+        have_pre = "loose_ast_sha256" in rows[0]
+        have_code = "code" in rows[0]
+        if not have_pre and not have_code:
+            raise ValueError(
+                "loose dedup needs a 'loose_ast_sha256' or 'code' column"
+            )
+        hashes = []
+        unparsed = 0
+        blank = 0
+        for r in rows:
+            pre = str(r.get("loose_ast_sha256") or "").strip() if have_pre else ""
+            if pre:
+                hashes.append(pre)
+                continue
+            blank += 1
+            code = r.get("code")
+            if code:
+                try:
+                    hashes.append(loose_ast_sha256(code))
+                    blank -= 1
+                    continue
+                except SyntaxError:
+                    pass
+            hashes.append(None)
+            unparsed += 1
+
+    seen = set()
+    keep = []
+    for i, (r, h) in enumerate(zip(rows, hashes)):
+        if h:
+            key = (str(r.get("benchmark", "")), str(r.get("problem_id", "")), h)
+        else:
+            # Blank/unparseable hashes are their own unique row.
+            key = ("__unparsed__", str(r.get("candidate_id", f"row_{i}")), str(i))
+        if key in seen:
+            continue
+        seen.add(key)
+        keep.append(r)
+
+    n_raw = len(rows)
+    return keep, {
+        "dedup_mode": mode,
+        "n_raw": n_raw,
+        "n_analyzed": len(keep),
+        "duplicate_fraction": 1 - len(keep) / n_raw if n_raw else 0.0,
+        "loose_unparsed_rows": unparsed,
+        "blank_hash_rows": blank,
+    }

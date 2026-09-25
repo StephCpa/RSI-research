@@ -13,10 +13,17 @@ import argparse
 import csv
 import itertools
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
 from scipy.optimize import minimize
+
+HERE = Path(__file__).resolve().parent
+if str(HERE) not in sys.path:
+    sys.path.insert(0, str(HERE))
+
+from ast_hash import apply_dedup
 
 
 def sigmoid(x):
@@ -149,23 +156,7 @@ def excess_stats(W, fit):
     }
 
 
-def deduplicate_rows(rows, view_cols, require_ast=True):
-    if require_ast and "ast_hash" not in rows[0]:
-        raise ValueError("primary analysis requires ast_hash; use --no-dedup only for sensitivity")
-    seen = set()
-    keep = []
-    for r in rows:
-        key = (r["problem_id"], r.get("ast_hash", r["candidate_id"]))
-        if key in seen:
-            continue
-        seen.add(key)
-        keep.append(r)
-    W = np.array([[int(r[c]) for c in view_cols] for r in keep], dtype=int)
-    problems = np.array([r["problem_id"] for r in keep], dtype=object)
-    return keep, problems, W
-
-
-def load_views(path, no_dedup=False):
+def load_views(path, dedup="none"):
     with Path(path).open(newline="") as f:
         rows = list(csv.DictReader(f))
     if not rows:
@@ -176,13 +167,10 @@ def load_views(path, no_dedup=False):
     view_cols = [c for c in rows[0] if c.startswith("view_")]
     if len(view_cols) < 3:
         raise ValueError("need at least three view_* columns")
-    if no_dedup:
-        keep = rows
-        W = np.array([[int(r[c]) for c in view_cols] for r in keep], dtype=int)
-        problems = np.array([r["problem_id"] for r in keep], dtype=object)
-    else:
-        keep, problems, W = deduplicate_rows(rows, view_cols, require_ast=True)
-    return keep, problems, view_cols, W
+    keep, pool = apply_dedup(rows, dedup)
+    W = np.array([[int(r[c]) for c in view_cols] for r in keep], dtype=int)
+    problems = np.array([r["problem_id"] for r in keep], dtype=object)
+    return keep, problems, view_cols, W, pool
 
 
 def cluster_bootstrap(rows, view_cols, problems, reps=1000, starts=12, seed=20260920):
@@ -213,11 +201,13 @@ def main():
     p.add_argument("--starts", type=int, default=12)
     p.add_argument("--cluster-reps", type=int, default=1000)
     p.add_argument("--seed", type=int, default=20260919)
-    p.add_argument("--no-dedup", action="store_true")
+    p.add_argument("--dedup",choices=["none","loose","strict"],default="none",
+                   help="primary pool is 'none' (raw candidate draws); "
+                        "'loose' and 'strict' are sensitivity tiers")
     p.add_argument("--output", default=None)
     a = p.parse_args()
 
-    rows, problems, view_cols, W = load_views(a.input_csv, no_dedup=a.no_dedup)
+    rows, problems, view_cols, W, pool = load_views(a.input_csv, dedup=a.dedup)
     fit = fit_ds(W, starts=a.starts, seed=a.seed)
     stat = excess_stats(W, fit)
 
@@ -232,6 +222,12 @@ def main():
     summary = {
         **stat,
         "view_cols": view_cols,
+        "n_raw": pool["n_raw"],
+        "dedup_mode": pool["dedup_mode"],
+        "n_analyzed": pool["n_analyzed"],
+        "duplicate_fraction": pool["duplicate_fraction"],
+        "loose_unparsed_rows": pool["loose_unparsed_rows"],
+        "blank_hash_rows": pool["blank_hash_rows"],
         "pi": fit["pi"],
         "q_plus": fit["q_plus"].tolist(),
         "q_minus": fit["q_minus"].tolist(),

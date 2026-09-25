@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -24,6 +25,12 @@ from scipy.stats import beta, binomtest
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
+HERE = Path(__file__).resolve().parent
+if str(HERE) not in sys.path:
+    sys.path.insert(0, str(HERE))
+
+from ast_hash import apply_dedup
 
 DEFAULT_BASELINE = [
     "view_tests_B",
@@ -40,38 +47,7 @@ def cp_interval(k,n,alpha=.05):
     return lo,hi
 
 
-def _loose_hash_column(rows):
-    """Loose AST hash per row: prefer a precomputed loose_ast_sha256 column,
-    else compute from code. Unparseable rows are kept unique and counted."""
-    have_pre = "loose_ast_sha256" in rows[0]
-    have_code = "code" in rows[0]
-    if not have_pre and not have_code:
-        raise ValueError(
-            "--dedup loose requires a 'code' or 'loose_ast_sha256' column"
-        )
-    from ast_hash import loose_ast_sha256
-
-    keys = []
-    unparsed = 0
-    for r in rows:
-        pre = r.get("loose_ast_sha256", "") if have_pre else ""
-        if pre:
-            keys.append(pre)
-            continue
-        code = r.get("code")
-        if code is None:
-            raise ValueError(
-                f"row {r.get('candidate_id', '?')} has neither loose hash nor code"
-            )
-        try:
-            keys.append(loose_ast_sha256(code))
-        except SyntaxError:
-            unparsed += 1
-            keys.append("__unparsed__" + str(r.get("candidate_id", "")))
-    return keys, unparsed
-
-
-def load(path,no_dedup=False,dedup="none"):
+def load(path,dedup="none"):
     with Path(path).open(newline="") as f:
         rows=list(csv.DictReader(f))
     if not rows:
@@ -83,27 +59,7 @@ def load(path,no_dedup=False,dedup="none"):
     if any(int(r["screen_tests_A"])!=1 for r in rows):
         raise ValueError("table contains candidates that failed screen A")
 
-    raw_n=len(rows)
-    loose_unparsed=0
-    if dedup=="none":
-        keep=rows
-    elif dedup=="strict":
-        seen=set(); keep=[]
-        for r in rows:
-            key=(r["problem_id"],r["ast_hash"])
-            if key in seen:
-                continue
-            seen.add(key); keep.append(r)
-    elif dedup=="loose":
-        hashes,loose_unparsed=_loose_hash_column(rows)
-        seen=set(); keep=[]
-        for r,h in zip(rows,hashes):
-            key=(r["problem_id"],h)
-            if key in seen:
-                continue
-            seen.add(key); keep.append(r)
-    else:
-        raise ValueError(f"unknown dedup mode: {dedup!r}")
+    keep,pool=apply_dedup(rows,dedup)
 
     truth=np.array([int(r["truth"]) for r in keep],dtype=int)
     if not np.all(np.isin(truth,[-1,1])):
@@ -114,7 +70,7 @@ def load(path,no_dedup=False,dedup="none"):
         if not np.all(np.isin(v,[-1,1])):
             raise ValueError(f"{c} must be +/-1")
     problem=np.array([r["problem_id"] for r in keep],dtype=object)
-    return rows,keep,problem,truth,W,raw_n,dedup,loose_unparsed
+    return rows,keep,problem,truth,W,pool
 
 
 def scheme(W,cols):
@@ -267,7 +223,7 @@ def main():
     a=p.parse_args()
 
     path=Path(a.input_csv)
-    raw,rows,problem,truth,W,raw_n,dedup,loose_unparsed=load(path,dedup=a.dedup)
+    raw,rows,problem,truth,W,pool=load(path,dedup=a.dedup)
     full=a.full_views or list(W.keys())
     u0=scheme(W,a.baseline_views); u1=scheme(W,full)
 
@@ -312,11 +268,12 @@ def main():
     mcnemar_p=float(binomtest(min(n01,n10),discord,.5).pvalue) if discord else 1.0
 
     summary={
-        "n_raw":raw_n,
-        "dedup_mode":dedup,
-        "n_primary":len(rows),
-        "duplicate_fraction":1-len(rows)/raw_n,
-        "loose_unparsed_rows":loose_unparsed,
+        "n_raw":pool["n_raw"],
+        "dedup_mode":pool["dedup_mode"],
+        "n_analyzed":pool["n_analyzed"],
+        "duplicate_fraction":pool["duplicate_fraction"],
+        "loose_unparsed_rows":pool["loose_unparsed_rows"],
+        "blank_hash_rows":pool["blank_hash_rows"],
         "point":point,
         "cluster95":{
             "r0":ci(boot["r0"]),

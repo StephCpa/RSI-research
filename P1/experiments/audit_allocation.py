@@ -1,7 +1,8 @@
 """Audit-budget allocation study for the deployed gate in preregistration v0.3.
 
-The input is the gold-labeled, A-screened candidate table. Primary analysis
-deduplicates within problem by ast_hash.
+The input is the gold-labeled, A-screened candidate table. The primary pool is
+the raw candidate draws (no deduplication); loose/strict deduplication are
+sensitivity tiers via --dedup.
 
 Strategies:
   uniform_screened
@@ -28,9 +29,10 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 import ds_excess
+from ast_hash import apply_dedup
 
 
-def load(path, no_dedup=False):
+def load(path, dedup="none"):
     with Path(path).open(newline="") as f:
         rows = list(csv.DictReader(f))
     if not rows:
@@ -50,23 +52,13 @@ def load(path, no_dedup=False):
     if len(judge_cols) != 6:
         raise ValueError(f"expected six LLM judge views, found {len(judge_cols)}")
 
-    if no_dedup:
-        keep = rows
-    else:
-        if "ast_hash" not in rows[0]:
-            raise ValueError("primary allocation analysis requires ast_hash")
-        seen = set(); keep = []
-        for r in rows:
-            key = (r["problem_id"], r["ast_hash"])
-            if key in seen:
-                continue
-            seen.add(key); keep.append(r)
+    keep, pool = apply_dedup(rows, dedup)
 
     truth = np.array([int(r["truth"]) for r in keep], dtype=int)
     W = np.array([[int(r[c]) for c in view_cols] for r in keep], dtype=int)
     testB = np.array([int(r["view_tests_B"]) for r in keep], dtype=int)
     J = np.array([[int(r[c]) for c in judge_cols] for r in keep], dtype=int)
-    return keep, truth, view_cols, W, judge_cols, testB, J
+    return keep, truth, view_cols, W, judge_cols, testB, J, pool
 
 
 def largest_remainder_allocation(B, sizes, weights):
@@ -195,12 +187,14 @@ def main():
     p.add_argument("--reps", type=int, default=2000)
     p.add_argument("--seed", type=int, default=20260922)
     p.add_argument("--ds-starts", type=int, default=12)
-    p.add_argument("--no-dedup", action="store_true")
+    p.add_argument("--dedup",choices=["none","loose","strict"],default="none",
+                   help="primary pool is 'none' (raw candidate draws); "
+                        "'loose' and 'strict' are sensitivity tiers")
     p.add_argument("--output", default=None)
     a = p.parse_args()
 
-    rows, truth, view_cols, W, judge_cols, testB, J = load(
-        a.input_csv, no_dedup=a.no_dedup
+    rows, truth, view_cols, W, judge_cols, testB, J, pool = load(
+        a.input_csv, dedup=a.dedup
     )
     y = (truth == -1).astype(float)
     pos = (J == 1).sum(axis=1)
@@ -265,6 +259,12 @@ def main():
     meta = {
         "F_true": F_true,
         "N_screened": len(y),
+        "n_raw": pool["n_raw"],
+        "dedup_mode": pool["dedup_mode"],
+        "n_analyzed": pool["n_analyzed"],
+        "duplicate_fraction": pool["duplicate_fraction"],
+        "loose_unparsed_rows": pool["loose_unparsed_rows"],
+        "blank_hash_rows": pool["blank_hash_rows"],
         "N_accepted": int(gate.sum()),
         "strata_h_6_5_4_sizes": [len(x) for x in strata_idx],
         "strata_h_6_5_4_false_rates": stratum_p.tolist(),
